@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParent, useParentChildren } from './useParents'
 import { parentService } from './parentService'
+import { useAuth } from '@/contexts/AuthContext'
+import { useStartConversation } from '@/features/messages/useMessages'
 import Breadcrumb from '@/components/Breadcrumb'
 import Spinner from '@/components/Spinner'
 import ErrorMessage from '@/components/ErrorMessage'
 import { Card, CardTitle } from '@/components/Card'
 import Button from '@/components/Button'
-import { Users, Mail, Phone, Link, Unlink } from 'lucide-react'
+import { Users, Mail, Phone, Link, Unlink, MessageSquare } from 'lucide-react'
 
 const RELATIONSHIPS = [
   { value: 'father', label: 'Father' },
@@ -21,6 +23,8 @@ export default function ParentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { profile } = useAuth()
+  const startConversation = useStartConversation()
 
   const { data: parent, isLoading, error } = useParent(id!)
   const { data: children = [], isLoading: loadingChildren, refetch: refetchChildren } = useParentChildren(id!)
@@ -69,6 +73,12 @@ export default function ParentDetailPage() {
   if (error) return <ErrorMessage message={error.message} />
   if (!parent) return <ErrorMessage message="Parent not found" />
 
+  const handleSendMessage = async () => {
+    if (!parent?.id || !profile?.id) return
+    const conversationId = await startConversation.mutateAsync({ userId1: profile.id, userId2: parent.id })
+    navigate(`/messages/${conversationId}`)
+  }
+
   return (
     <div>
       <Breadcrumb
@@ -83,6 +93,9 @@ export default function ParentDetailPage() {
           {parent.first_name} {parent.last_name}
         </h1>
         <div className="flex items-center gap-3">
+          <Button variant="secondary" onClick={handleSendMessage} isLoading={startConversation.isPending}>
+            <MessageSquare size={16} /> Send Message
+          </Button>
           <Button onClick={() => navigate(`/parents/${id}/edit`)}>Edit</Button>
           <Button
             variant={parent.is_active ? 'danger' : 'primary'}

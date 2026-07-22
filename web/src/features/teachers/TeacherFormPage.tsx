@@ -16,6 +16,7 @@ const createSchema = z.object({
   email: z.string().email('Valid email required'),
   first_name: z.string().min(1, 'Required'),
   last_name: z.string().min(1, 'Required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   employee_id: z.string().min(1, 'Required'),
   department: z.string().optional(),
   qualification: z.string().optional(),
@@ -83,6 +84,7 @@ export default function TeacherFormPage() {
           p_first_name: data.first_name,
           p_last_name: data.last_name,
           p_role: 'teacher',
+          p_password: data.password,
           p_phone: data.phone || null,
           p_employee_id: data.employee_id,
           p_department: data.department || null,
@@ -118,7 +120,10 @@ export default function TeacherFormPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl border border-slate-200 p-6 max-w-2xl space-y-4">
         <div className="grid grid-cols-2 gap-4">
           {!isEdit && (
-            <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
+            <>
+              <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
+              <Input label="Password" type="password" {...register('password')} error={errors.password?.message} />
+            </>
           )}
           <Input label="Employee ID" {...register('employee_id')} error={errors.employee_id?.message} />
           <Input label="First Name" {...register('first_name')} error={errors.first_name?.message} />

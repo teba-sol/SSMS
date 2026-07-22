@@ -16,6 +16,7 @@ const createSchema = z.object({
   email: z.string().email('Valid email required'),
   first_name: z.string().min(1, 'Required'),
   last_name: z.string().min(1, 'Required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   phone: z.string().optional(),
 })
 
@@ -62,6 +63,7 @@ export default function ParentFormPage() {
           p_first_name: data.first_name,
           p_last_name: data.last_name,
           p_role: 'parent',
+          p_password: data.password,
           p_phone: data.phone || null,
         })
 
@@ -93,7 +95,10 @@ export default function ParentFormPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl border border-slate-200 p-6 max-w-2xl space-y-4">
         <div className="grid grid-cols-2 gap-4">
           {!isEdit && (
-            <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
+            <>
+              <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
+              <Input label="Password" type="password" {...register('password')} error={errors.password?.message} />
+            </>
           )}
           <Input label="First Name" {...register('first_name')} error={errors.first_name?.message} />
           <Input label="Last Name" {...register('last_name')} error={errors.last_name?.message} />

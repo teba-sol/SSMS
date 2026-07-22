@@ -31,6 +31,17 @@ import ResultsPage from '@/features/results/ResultsPage'
 import ResultFormPage from '@/features/results/ResultFormPage'
 import AnnouncementListPage from '@/features/announcements/AnnouncementListPage'
 import AnnouncementFormPage from '@/features/announcements/AnnouncementFormPage'
+import ActivityListPage from '@/features/activities/ActivityListPage'
+import ActivityFormPage from '@/features/activities/ActivityFormPage'
+import NotificationListPage from '@/features/notifications/NotificationListPage'
+import MessageListPage from '@/features/messages/MessageListPage'
+import ConversationChatPage from '@/features/messages/ConversationChatPage'
+import ReportsPage from '@/features/reports/ReportsPage'
+import AttendanceReportPage from '@/features/reports/AttendanceReportPage'
+import ResultsReportPage from '@/features/reports/ResultsReportPage'
+import StudentReportPage from '@/features/reports/StudentReportPage'
+import TeacherReportPage from '@/features/reports/TeacherReportPage'
+import SettingsPage from '@/features/settings/SettingsPage'
 import { AuthGuard } from '@/components/AuthGuard'
 
 export const router = createBrowserRouter([
@@ -216,6 +227,59 @@ export const router = createBrowserRouter([
           {
             path: 'announcements/:id/edit',
             element: <AnnouncementFormPage />,
+          },
+          // Activities
+          {
+            path: 'activities',
+            element: <ActivityListPage />,
+          },
+          {
+            path: 'activities/new',
+            element: <ActivityFormPage />,
+          },
+          {
+            path: 'activities/:id/edit',
+            element: <ActivityFormPage />,
+          },
+          // Notifications
+          {
+            path: 'notifications',
+            element: <NotificationListPage />,
+          },
+          // Messages
+          {
+            path: 'messages',
+            element: <MessageListPage />,
+          },
+          {
+            path: 'messages/:id',
+            element: <ConversationChatPage />,
+          },
+          // Reports
+          {
+            path: 'reports',
+            element: <ReportsPage />,
+          },
+          {
+            path: 'reports/attendance',
+            element: <AttendanceReportPage />,
+          },
+          {
+            path: 'reports/results',
+            element: <ResultsReportPage />,
+          },
+          {
+            path: 'reports/students',
+            element: <StudentReportPage />,
+          },
+          {
+            path: 'reports/teachers',
+            element: <TeacherReportPage />,
+          },
+          // Settings
+          {
+            path: 'settings',
+            element: <SettingsPage />,
           },
         ],
       },

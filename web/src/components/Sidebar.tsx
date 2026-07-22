@@ -13,6 +13,11 @@ import {
   UserPlus,
   School,
   Layers,
+  Activity,
+  Bell,
+  MessageSquare,
+  FileText,
+  Settings,
 } from 'lucide-react'
 
 type NavItem =
@@ -29,13 +34,24 @@ const navItems: NavItem[] = [
   { to: '/teachers', label: 'Teachers', icon: GraduationCap },
   { to: '/students', label: 'Students', icon: Users },
   { to: '/parents', label: 'Parents', icon: Heart },
-  { label: 'Relationships', isHeader: true },
+  { label: 'Assignments', isHeader: true },
   { to: '/teacher-assignments', label: 'Teacher Assignments', icon: ArrowRightLeft },
   { to: '/student-enrollments', label: 'Student Enrollments', icon: UserPlus },
   { label: 'Operations', isHeader: true },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck },
   { to: '/results', label: 'Results', icon: BarChart3 },
+  { to: '/activities', label: 'Activities', icon: Activity },
   { to: '/announcements', label: 'Announcements', icon: Megaphone },
+  { label: 'Communication', isHeader: true },
+  { to: '/notifications', label: 'Notifications', icon: Bell },
+  { to: '/messages', label: 'Messages', icon: MessageSquare },
+  { label: 'Reports', isHeader: true },
+  { to: '/reports/attendance', label: 'Attendance Reports', icon: FileText },
+  { to: '/reports/results', label: 'Results Reports', icon: FileText },
+  { to: '/reports/students', label: 'Student Reports', icon: FileText },
+  { to: '/reports/teachers', label: 'Teacher Reports', icon: FileText },
+  { label: 'System', isHeader: true },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Sidebar() {
