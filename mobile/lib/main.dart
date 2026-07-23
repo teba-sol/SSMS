@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'core/theme/theme_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -52,7 +53,7 @@ class SSCSApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeProvider),
       routerConfig: router,
     );
   }

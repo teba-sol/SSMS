@@ -66,6 +66,35 @@ class Profile extends Equatable {
     );
   }
 
+  // Add copyWith for updating mutable fields
+  Profile copyWith({
+    String? firstName,
+    String? lastName,
+    String? phone,
+    String? avatarUrl,
+    UserRole? role,
+    bool? isActive,
+    bool? emailVerified,
+    DateTime? lastLogin,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Profile(
+      id: id,
+      email: email,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      phone: phone ?? this.phone,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      role: role ?? this.role,
+      isActive: isActive ?? this.isActive,
+      emailVerified: emailVerified ?? this.emailVerified,
+      lastLogin: lastLogin ?? this.lastLogin,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

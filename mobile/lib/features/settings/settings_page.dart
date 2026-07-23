@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/theme_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
@@ -100,8 +102,8 @@ class SettingsPage extends ConsumerWidget {
               title: 'Dark Mode',
               subtitle: 'System default',
               trailing: Switch(
-                value: Theme.of(context).brightness == Brightness.dark,
-                onChanged: (_) {},
+                value: ref.watch(themeProvider) == ThemeMode.dark,
+                onChanged: (value) => ref.read(themeProvider.notifier).toggleTheme(),
               ),
             ),
             _Divider(),

@@ -135,9 +135,16 @@ class AuthNotifier extends Notifier<AuthState> {
     );
   }
 
+  // Public method to refresh profile after updates
+  void refreshProfile() => _init();
+
   Future<void> signOut() async {
-    await ref.read(authRepositoryProvider).signOut();
-    state = const AuthState(status: AuthStatus.unauthenticated);
+    state = state.copyWith(status: AuthStatus.loading, clearError: true);
+    final result = await ref.read(authRepositoryProvider).signOut();
+    result.fold(
+      (error) => state = state.copyWith(status: AuthStatus.error, errorMessage: error),
+      (_) => state = const AuthState(status: AuthStatus.unauthenticated),
+    );
   }
 }
 

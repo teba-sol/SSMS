@@ -36,4 +36,5 @@ class RouteNames {
 
   // Shared
   static const String settings = '/settings';
+  static const String editProfile = '/settings/edit-profile';
 }

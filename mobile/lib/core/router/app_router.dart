@@ -25,6 +25,7 @@ import '../../features/announcements/announcement_form_page.dart';
 import '../../features/students/students_page.dart';
 import '../../features/students/student_detail_page.dart';
 import '../../features/settings/settings_page.dart';
+import '../../features/settings/edit_profile_page.dart';
 import 'route_names.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -250,6 +251,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.settings,
         builder: (_, __) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: RouteNames.editProfile,
+        builder: (_, __) => const EditProfilePage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

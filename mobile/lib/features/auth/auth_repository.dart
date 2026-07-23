@@ -1,6 +1,9 @@
 import 'package:dartz/dartz.dart';
 import '../../models/profile_model.dart';
 import 'auth_service.dart';
+import '../../supabase/supabase_tables.dart';
+import '../../supabase/supabase_client.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthRepository {
   final AuthService _service;
@@ -35,8 +38,7 @@ class AuthRepository {
         final jwtProfile = _service.buildProfileFromJwt(user);
         if (jwtProfile == null) {
           await _service.signOut();
-          return const Left(
-              'Could not load your profile. Contact your administrator.');
+          return const Left('Could not load your profile. Contact your administrator.');
         }
         data = jwtProfile;
       }
@@ -63,6 +65,15 @@ class AuthRepository {
     }
   }
 
+  Future<Either<String, Unit>> updateEmail(String newEmail) async {
+    try {
+      await AppSupabase.client.auth.updateUser(UserAttributes(email: newEmail));
+      return const Right(unit);
+    } catch (e) {
+      return Left(_parseError(e));
+    }
+  }
+
   Future<Either<String, Unit>> updatePassword(String newPassword) async {
     try {
       await _service.updatePassword(newPassword);
@@ -75,6 +86,15 @@ class AuthRepository {
   Future<Either<String, Unit>> signOut() async {
     try {
       await _service.signOut();
+      return const Right(unit);
+    } catch (e) {
+      return Left(_parseError(e));
+    }
+  }
+
+  Future<Either<String, Unit>> updateProfile(Profile profile) async {
+    try {
+      await AppSupabase.client.from(AppTables.profiles).upsert(profile.toJson());
       return const Right(unit);
     } catch (e) {
       return Left(_parseError(e));
