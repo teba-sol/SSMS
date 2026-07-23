@@ -5,39 +5,47 @@ class AppErrorWidget extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
 
-  const AppErrorWidget({
-    super.key,
-    required this.message,
-    this.onRetry,
-  });
+  const AppErrorWidget({super.key, required this.message, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: AppColors.error,
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.errorLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline_rounded,
+                  size: 40, color: AppColors.error),
             ),
             const SizedBox(height: 16),
             Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.textSecondary,
+              'Something went wrong',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
             if (onRetry != null) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Try Again'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(140, 44),
+                ),
               ),
             ],
           ],

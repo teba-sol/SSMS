@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../models/profile_model.dart';
+import '../../supabase/supabase_client.dart';
 import 'auth_model.dart';
 import 'auth_repository.dart';
 
@@ -10,27 +13,83 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
 
 class AuthNotifier extends Notifier<AuthState> {
+  StreamSubscription? _authSubscription;
+
   @override
   AuthState build() {
-    _init();
+    ref.onDispose(() {
+      _authSubscription?.cancel();
+    });
+    Future.microtask(() => _init());
     return const AuthState();
   }
 
   void _init() async {
-    state = state.copyWith(status: AuthStatus.loading, clearError: true);
+    try {
+      final currentSession = AppSupabase.client.auth.currentSession;
 
-    final result = await ref.read(authRepositoryProvider).getCurrentProfile();
+      // Subscribe to auth state changes from Supabase
+      _authSubscription?.cancel();
+      _authSubscription = AppSupabase.client.auth.onAuthStateChange.listen((data) async {
+        final event = data.event;
+        final session = data.session;
 
-    result.fold(
-      (error) => state = state.copyWith(
+        if (session == null || event == AuthChangeEvent.signedOut) {
+          state = state.copyWith(
+            status: AuthStatus.unauthenticated,
+            clearError: true,
+            clearProfile: true,
+          );
+          return;
+        }
+
+        if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.initialSession || event == AuthChangeEvent.tokenRefreshed) {
+          final result = await ref.read(authRepositoryProvider).getCurrentProfile();
+          result.fold(
+            (error) => state = state.copyWith(
+              status: AuthStatus.unauthenticated,
+              clearError: true,
+              clearProfile: true,
+            ),
+            (profile) => state = state.copyWith(
+              status: AuthStatus.authenticated,
+              profile: profile,
+              clearError: true,
+            ),
+          );
+        }
+      });
+
+      if (currentSession == null) {
+        state = state.copyWith(
+          status: AuthStatus.unauthenticated,
+          clearError: true,
+          clearProfile: true,
+        );
+        return;
+      }
+
+      // Also check current profile immediately
+      final result = await ref.read(authRepositoryProvider).getCurrentProfile();
+      result.fold(
+        (error) => state = state.copyWith(
+          status: AuthStatus.unauthenticated,
+          clearError: true,
+          clearProfile: true,
+        ),
+        (profile) => state = state.copyWith(
+          status: AuthStatus.authenticated,
+          profile: profile,
+          clearError: true,
+        ),
+      );
+    } catch (_) {
+      state = state.copyWith(
         status: AuthStatus.unauthenticated,
         clearError: true,
-      ),
-      (profile) => state = state.copyWith(
-        status: AuthStatus.authenticated,
-        clearError: true,
-      ),
-    );
+        clearProfile: true,
+      );
+    }
   }
 
   Future<void> signIn({
@@ -48,9 +107,11 @@ class AuthNotifier extends Notifier<AuthState> {
       (error) => state = state.copyWith(
         status: AuthStatus.error,
         errorMessage: error,
+        clearProfile: true,
       ),
       (profile) => state = state.copyWith(
         status: AuthStatus.authenticated,
+        profile: profile,
         clearError: true,
       ),
     );
@@ -59,8 +120,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> resetPassword(String email) async {
     state = state.copyWith(status: AuthStatus.loading, clearError: true);
 
-    final result =
-        await ref.read(authRepositoryProvider).resetPassword(email);
+    final result = await ref.read(authRepositoryProvider).resetPassword(email);
 
     result.fold(
       (error) => state = state.copyWith(
@@ -70,6 +130,7 @@ class AuthNotifier extends Notifier<AuthState> {
       (_) => state = state.copyWith(
         status: AuthStatus.unauthenticated,
         clearError: true,
+        clearProfile: true,
       ),
     );
   }
@@ -80,17 +141,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 }
 
-final currentProfileProvider = FutureProvider<Profile?>((ref) async {
-  final auth = ref.watch(authProvider);
-
-  if (!auth.isAuthenticated) {
-    return null;
-  }
-
-  final result = await ref.read(authRepositoryProvider).getCurrentProfile();
-
-  return result.fold(
-    (_) => null,
-    (profile) => profile,
-  );
+/// Reads profile from auth state — synchronous, no FutureProvider needed.
+final currentProfileProvider = Provider<Profile?>((ref) {
+  return ref.watch(authProvider).profile;
 });

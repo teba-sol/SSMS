@@ -1,4 +1,4 @@
-package com.example.sscs_mobile
+package com.sscs.mobile
 
 import io.flutter.embedding.android.FlutterActivity
 

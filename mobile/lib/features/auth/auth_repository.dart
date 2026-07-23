@@ -18,16 +18,30 @@ class AuthRepository {
       );
 
       if (response.user == null) {
-        return const Left('No user found');
+        return const Left('No account found. Contact your administrator.');
       }
 
-      final profileData = await _service.fetchProfile(response.user!.id);
+      final user = response.user!;
 
-      if (profileData == null) {
-        return const Left('Profile not found. Contact administrator.');
+      // Strategy 1: try the profiles table (works when RLS is healthy)
+      final profileData = await _service.fetchProfile(user.id);
+
+      Map<String, dynamic> data;
+      if (profileData != null) {
+        data = profileData;
+      } else {
+        // Strategy 2: build profile from JWT claims
+        // This works even when the profiles table RLS is broken
+        final jwtProfile = _service.buildProfileFromJwt(user);
+        if (jwtProfile == null) {
+          await _service.signOut();
+          return const Left(
+              'Could not load your profile. Contact your administrator.');
+        }
+        data = jwtProfile;
       }
 
-      final profile = Profile.fromJson(profileData);
+      final profile = Profile.fromJson(data);
 
       if (!profile.isActive) {
         await _service.signOut();
@@ -74,21 +88,53 @@ class AuthRepository {
         return const Left('Not authenticated');
       }
 
+      // Try DB first, fall back to JWT
       final profileData = await _service.fetchProfile(user.id);
-
-      if (profileData == null) {
-        return const Left('Profile not found');
+      if (profileData != null) {
+        return Right(Profile.fromJson(profileData));
       }
 
-      return Right(Profile.fromJson(profileData));
+      final jwtProfile = _service.buildProfileFromJwt(user);
+      if (jwtProfile != null) {
+        return Right(Profile.fromJson(jwtProfile));
+      }
+
+      return const Left('Profile not found');
     } catch (e) {
       return Left(_parseError(e));
     }
   }
 
   String _parseError(dynamic error) {
-    if (error is Exception) {
-      return error.toString().replaceFirst('Exception: ', '');
+    final msg = error.toString().toLowerCase();
+
+    if (msg.contains('email not confirmed') ||
+        msg.contains('not confirmed') ||
+        msg.contains('confirmation')) {
+      return 'Email not confirmed. Ask your administrator to confirm your account.';
+    }
+    if (msg.contains('invalid_credentials') ||
+        msg.contains('invalid login') ||
+        (msg.contains('invalid') && msg.contains('password')) ||
+        msg.contains('wrong password')) {
+      return 'Invalid email or password. Please try again.';
+    }
+    if (msg.contains('user not found') ||
+        msg.contains('no user') ||
+        msg.contains('does not exist')) {
+      return 'No account found with this email. Contact your administrator.';
+    }
+    if (msg.contains('network') ||
+        msg.contains('socket') ||
+        msg.contains('connection') ||
+        msg.contains('timeout')) {
+      return 'Network error. Check your internet connection.';
+    }
+    if (msg.contains('too many') || msg.contains('rate limit')) {
+      return 'Too many attempts. Please wait and try again.';
+    }
+    if (msg.contains('profile not found')) {
+      return 'Profile not found. Contact your administrator.';
     }
     return error.toString();
   }

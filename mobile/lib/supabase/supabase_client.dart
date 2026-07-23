@@ -5,12 +5,12 @@ class AppSupabase {
 
   static const String url = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://your-project.supabase.co',
+    defaultValue: 'https://eiojnxxfzgrgnupaguwf.supabase.co',
   );
 
   static const String anonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: 'your-anon-key',
+    defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpb2pueHhmemdyZ251cGFndXdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMjIwMDcsImV4cCI6MjA5OTc5ODAwN30.Hc6I0Q2PS5m7JPaHzqPbBHtII4e6_K2UAoUx-dDUFjI',
   );
 
   static SupabaseClient get client => Supabase.instance.client;

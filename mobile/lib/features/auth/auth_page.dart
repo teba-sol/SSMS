@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/validators.dart';
+import 'auth_model.dart' as auth_model;
 import 'auth_provider.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
@@ -39,14 +40,31 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      if (next.status == AuthStatus.error && next.errorMessage != null) {
+    ref.listen<auth_model.AuthState>(authProvider, (previous, next) {
+      if (next.status == auth_model.AuthStatus.error &&
+          next.errorMessage != null) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.errorMessage!),
             backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () =>
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+            ),
           ),
         );
+      } else if (next.status == auth_model.AuthStatus.authenticated && next.profile != null) {
+        // Direct navigation safety fallback
+        final role = next.profile!.role;
+        if (role == auth_model.UserRole.teacher || role == auth_model.UserRole.administrator) {
+          context.go(RouteNames.teacherDashboard);
+        } else {
+          context.go(RouteNames.parentDashboard);
+        }
       }
     });
 
@@ -72,9 +90,10 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     Text(
                       'Student Status Checkup',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -111,21 +130,48 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
+                          onPressed: () =>
+                              setState(() => _obscurePassword = !_obscurePassword),
                         ),
                       ),
                     ),
+
+                    // Show error inline if present
+                    if (authState.status == auth_model.AuthStatus.error &&
+                        authState.errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.errorLight,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: AppColors.error.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.error_outline_rounded,
+                                color: AppColors.error, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                authState.errorMessage!,
+                                style: const TextStyle(
+                                    color: AppColors.error,
+                                    fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {
-                          context.pushNamed(RouteNames.forgotPassword);
-                        },
+                        onPressed: () => context.push(RouteNames.forgotPassword),
                         child: const Text('Forgot Password?'),
                       ),
                     ),

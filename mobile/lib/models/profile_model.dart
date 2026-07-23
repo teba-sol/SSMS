@@ -34,24 +34,35 @@ class Profile extends Equatable {
   String get fullName => '$firstName $lastName';
 
   factory Profile.fromJson(Map<String, dynamic> json) {
+    final rawRole = (json['role'] as String?)?.toLowerCase() ?? 'parent';
+    final role = UserRole.values.firstWhere(
+      (e) => e.name == rawRole,
+      orElse: () => UserRole.parent,
+    );
+
+    final rawEmail = json['email'] as String? ?? '';
+    final rawFirstName = json['first_name'] as String? ?? (rawEmail.contains('@') ? rawEmail.split('@').first : 'User');
+    final rawLastName = json['last_name'] as String? ?? '';
+
+    DateTime parseDate(dynamic dateStr) {
+      if (dateStr == null) return DateTime.now();
+      if (dateStr is DateTime) return dateStr;
+      return DateTime.tryParse(dateStr.toString()) ?? DateTime.now();
+    }
+
     return Profile(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String,
+      id: json['id'] as String? ?? '',
+      email: rawEmail,
+      firstName: rawFirstName,
+      lastName: rawLastName,
       phone: json['phone'] as String?,
       avatarUrl: json['avatar_url'] as String?,
-      role: UserRole.values.firstWhere(
-        (e) => e.name == json['role'],
-        orElse: () => UserRole.parent,
-      ),
+      role: role,
       isActive: json['is_active'] as bool? ?? true,
       emailVerified: json['email_verified'] as bool? ?? false,
-      lastLogin: json['last_login'] != null
-          ? DateTime.parse(json['last_login'] as String)
-          : null,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      lastLogin: json['last_login'] != null ? parseDate(json['last_login']) : null,
+      createdAt: parseDate(json['created_at']),
+      updatedAt: parseDate(json['updated_at']),
     );
   }
 
