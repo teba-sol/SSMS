@@ -331,6 +331,7 @@ class _StudentCard extends StatelessWidget {
             onTap: () => context.push(RouteNames.teacherStudentDetail, extra: {
               'studentId': student.id,
               'studentName': student.fullName,
+              'studentNumber': student.studentId,
             }),
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -457,6 +458,7 @@ class _StudentCard extends StatelessWidget {
                       extra: {
                         'studentId': student.id,
                         'studentName': student.fullName,
+                        'studentNumber': student.studentId,
                       }),
                 ),
               ],

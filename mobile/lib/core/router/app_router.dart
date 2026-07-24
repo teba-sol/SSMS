@@ -139,6 +139,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             assignmentId: extra?['assignmentId'] ?? '',
             className: extra?['className'] ?? '',
             subjectName: extra?['subjectName'] ?? '',
+            preselectedStudentId: extra?['preselectedStudentId'],
           );
         },
       ),
@@ -190,6 +191,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return StudentDetailPage(
             studentId: extra?['studentId'] ?? '',
             studentName: extra?['studentName'] ?? '',
+            studentNumber: extra?['studentNumber'],
           );
         },
       ),

@@ -44,7 +44,7 @@ class _TeacherAttendanceView extends ConsumerWidget {
       body: assignmentsAsync.when(
         data: (assignments) {
           if (assignments.isEmpty) {
-            return EmptyWidget(
+            return const EmptyWidget(
               title: 'No Classes Assigned',
               subtitle: 'You have no classes assigned for this academic year.',
               icon: Icons.class_,
@@ -80,7 +80,6 @@ class _AttendanceClassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     return AppCard(
       padding: const EdgeInsets.all(16),
       onTap: () => context.push(RouteNames.teacherAttendanceMark, extra: {
@@ -99,7 +98,7 @@ class _AttendanceClassCard extends StatelessWidget {
                   color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.class_,
+                child: const Icon(Icons.class_,
                     color: AppColors.primary, size: 20),
               ),
               const SizedBox(width: 12),

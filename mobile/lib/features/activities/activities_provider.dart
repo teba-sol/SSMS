@@ -6,18 +6,22 @@ import 'activities_service.dart';
 final activitiesServiceProvider =
     Provider<ActivitiesService>((ref) => ActivitiesService());
 
-// For teachers — by class
+// For teachers — class-wide activities by class
 final classActivitiesProvider =
     FutureProvider.family<List<Activity>, String>((ref, classId) async {
   return ref.read(activitiesServiceProvider).getActivities(classId: classId);
 });
 
-// For parents — by student
+// Student-specific behavior/participation logs (teacher view)
+final studentLogsProvider =
+    FutureProvider.family<List<Activity>, String>((ref, studentId) async {
+  return ref.read(activitiesServiceProvider).getStudentLogs(studentId);
+});
+
+// For parents — class + student-specific activities
 final studentActivitiesProvider =
     FutureProvider.family<List<Activity>, String>((ref, studentId) async {
-  return ref
-      .read(activitiesServiceProvider)
-      .getActivitiesForStudent(studentId);
+  return ref.read(activitiesServiceProvider).getActivitiesForStudent(studentId);
 });
 
 class ActivitiesNotifier extends Notifier<AsyncValue<void>> {
@@ -31,6 +35,7 @@ class ActivitiesNotifier extends Notifier<AsyncValue<void>> {
     required DateTime activityDate,
     String? location,
     String? classId,
+    String? studentId,
     required String academicYearId,
   }) async {
     state = const AsyncValue.loading();
@@ -44,6 +49,7 @@ class ActivitiesNotifier extends Notifier<AsyncValue<void>> {
         if (location != null) 'location': location,
         'organizer_id': userId,
         if (classId != null) 'class_id': classId,
+        if (studentId != null) 'student_id': studentId,
         'academic_year_id': academicYearId,
       });
       state = const AsyncValue.data(null);

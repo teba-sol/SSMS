@@ -9,6 +9,7 @@ class Activity extends Equatable {
   final String? location;
   final String? organizerId;
   final String? classId;
+  final String? studentId;   // null = class-wide, set = student-specific log
   final String academicYearId;
   final DateTime createdAt;
   final Map<String, dynamic>? organizerData;
@@ -22,6 +23,7 @@ class Activity extends Equatable {
     this.location,
     this.organizerId,
     this.classId,
+    this.studentId,
     required this.academicYearId,
     required this.createdAt,
     this.organizerData,
@@ -33,6 +35,7 @@ class Activity extends Equatable {
   }
 
   bool get isSchoolWide => classId == null;
+  bool get isStudentLog => studentId != null;
 
   factory Activity.fromJson(Map<String, dynamic> json) => Activity(
         id: json['id'] as String,
@@ -43,6 +46,7 @@ class Activity extends Equatable {
         location: json['location'] as String?,
         organizerId: json['organizer_id'] as String?,
         classId: json['class_id'] as String?,
+        studentId: json['student_id'] as String?,
         academicYearId: json['academic_year_id'] as String,
         createdAt: DateTime.parse(json['created_at'] as String),
         organizerData: json['profiles'] as Map<String, dynamic>?,
@@ -56,6 +60,7 @@ class Activity extends Equatable {
         'location': location,
         'organizer_id': organizerId,
         if (classId != null) 'class_id': classId,
+        if (studentId != null) 'student_id': studentId,
         'academic_year_id': academicYearId,
       };
 

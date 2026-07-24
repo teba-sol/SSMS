@@ -12,12 +12,14 @@ class ResultFormPage extends ConsumerStatefulWidget {
   final String assignmentId;
   final String className;
   final String subjectName;
+  final String? preselectedStudentId;
 
   const ResultFormPage({
     super.key,
     required this.assignmentId,
     required this.className,
     required this.subjectName,
+    this.preselectedStudentId,
   });
 
   @override
@@ -62,7 +64,7 @@ class _ResultFormPageState extends ConsumerState<ResultFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Need to get classId from the assignment
+    // Fetch students using the proper Riverpod provider keyed by assignmentId
     final assignmentsAsync = ref.watch(teacherAssignmentsProvider);
 
     return Scaffold(
@@ -84,10 +86,19 @@ class _ResultFormPageState extends ConsumerState<ResultFormPage> {
           final assignment = assignments.where((a) => a.id == widget.assignmentId).firstOrNull;
           final classId = assignment?.classId ?? '';
 
-          return FutureBuilder<List<Student>>(
-            future: ref.read(studentsServiceProvider).getStudentsInClass(classId),
-            builder: (context, snapshot) {
-              final students = snapshot.data ?? [];
+          final studentsAsync = ref.watch(classStudentsListProvider(classId));
+
+          return studentsAsync.when(
+            data: (students) {
+              // Pre-select student if navigated from student detail
+              if (widget.preselectedStudentId != null && _selectedStudent == null) {
+                final match = students.where((s) => s.id == widget.preselectedStudentId).firstOrNull;
+                if (match != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    setState(() => _selectedStudent = match);
+                  });
+                }
+              }
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
@@ -132,7 +143,7 @@ class _ResultFormPageState extends ConsumerState<ResultFormPage> {
                         ),
                         items: students.map((s) => DropdownMenuItem(
                           value: s,
-                          child: Text('${s.fullName} (${s.studentId})'),
+                          child: Text(s.fullName),
                         )).toList(),
                         onChanged: (s) => setState(() => _selectedStudent = s),
                         validator: (v) => v == null ? 'Please select a student' : null,
@@ -272,6 +283,8 @@ class _ResultFormPageState extends ConsumerState<ResultFormPage> {
                 ),
               );
             },
+            loading: () => const LoadingWidget(),
+            error: (e, _) => Center(child: Text('Error loading students: $e')),
           );
         },
         loading: () => const LoadingWidget(),

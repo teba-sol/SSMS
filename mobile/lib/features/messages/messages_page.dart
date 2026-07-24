@@ -135,7 +135,6 @@ class _SelectStudentParentSheet extends ConsumerStatefulWidget {
 class _SelectStudentParentSheetState
     extends ConsumerState<_SelectStudentParentSheet> {
   String _search = '';
-  bool _loading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -252,11 +251,9 @@ class _SelectStudentParentSheetState
         onParentSelected: (parentId, parentName) async {
           Navigator.pop(context); // close parent picker
           Navigator.pop(context); // close student picker
-          setState(() => _loading = true);
           final conv = await ref
               .read(conversationsProvider.notifier)
               .getOrCreate(parentId);
-          setState(() => _loading = false);
           if (conv != null && mounted) {
             context.push(RouteNames.teacherChat, extra: {
               'conversationId': conv.id,
@@ -429,7 +426,7 @@ class _ParentPickerSheet extends ConsumerWidget {
                     trailing: const Icon(Icons.arrow_forward_ios_rounded,
                         size: 14),
                     onTap: () => onParentSelected(
-                        p.parentId, '${studentName}\'s ${p.relationship.label}'),
+                        p.parentId, '$studentName\'s ${p.relationship.label}'),
                   );
                 }).toList(),
               );

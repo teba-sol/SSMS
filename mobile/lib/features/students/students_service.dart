@@ -3,7 +3,6 @@ import '../../supabase/supabase_tables.dart';
 import '../../models/teacher_model.dart';
 import '../../models/student_model.dart';
 import '../../models/parent_model.dart';
-import '../../models/profile_model.dart';
 
 class StudentsService {
   final _client = AppSupabase.client;
@@ -43,9 +42,57 @@ class StudentsService {
     final data = await _client
         .from(AppTables.teacherAssignments)
         .select(
-            '*, classes(id, name, grade_level, section, capacity, room, is_active, academic_year_id), subjects(id, name, code, description), academic_years(id, name, is_current)')
+            'id, teacher_id, class_id, subject_id, academic_year_id, '
+            'classes(id, name, grade_level, section, capacity, room, is_active, academic_year_id), '
+            'subjects(id, name, code, description), '
+            'academic_years(id, name, is_current)')
         .eq('teacher_id', teacherId);
-    return (data as List).map((e) => TeacherAssignment.fromJson(e)).toList();
+
+    final assignments = (data as List).map((e) => TeacherAssignment.fromJson(e)).toList();
+
+    // If any assignment is missing class/subject data (ambiguous FK fallback),
+    // fetch them separately by their IDs
+    final missingClassData = assignments.any((a) => a.classData == null);
+    final missingSubjectData = assignments.any((a) => a.subjectData == null);
+
+    if (!missingClassData && !missingSubjectData) return assignments;
+
+    // Fetch classes separately
+    Map<String, Map<String, dynamic>> classMap = {};
+    Map<String, Map<String, dynamic>> subjectMap = {};
+
+    if (missingClassData) {
+      final classIds = assignments.map((a) => a.classId).toSet().toList();
+      final classData = await _client
+          .from(AppTables.classes)
+          .select('id, name, grade_level, section')
+          .inFilter('id', classIds);
+      for (final c in classData as List) {
+        classMap[c['id'] as String] = c as Map<String, dynamic>;
+      }
+    }
+
+    if (missingSubjectData) {
+      final subjectIds = assignments.map((a) => a.subjectId).toSet().toList();
+      final subjectData = await _client
+          .from(AppTables.subjects)
+          .select('id, name, code, description')
+          .inFilter('id', subjectIds);
+      for (final s in subjectData as List) {
+        subjectMap[s['id'] as String] = s as Map<String, dynamic>;
+      }
+    }
+
+    return assignments.map((a) => TeacherAssignment(
+      id: a.id,
+      teacherId: a.teacherId,
+      classId: a.classId,
+      subjectId: a.subjectId,
+      academicYearId: a.academicYearId,
+      classData: a.classData ?? classMap[a.classId],
+      subjectData: a.subjectData ?? subjectMap[a.subjectId],
+      academicYearData: a.academicYearData,
+    )).toList();
   }
 
   /// Get all students in a class

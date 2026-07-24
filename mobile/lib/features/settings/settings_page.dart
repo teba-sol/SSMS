@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/theme_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
@@ -33,7 +32,7 @@ class SettingsPage extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: profile?.role == UserRole.teacher
+                gradient: profile.role == UserRole.teacher
                     ? AppColors.teacherGradient
                     : AppColors.parentGradient,
                 borderRadius: BorderRadius.circular(16),
@@ -44,7 +43,7 @@ class SettingsPage extends ConsumerWidget {
                     radius: 32,
                     backgroundColor: Colors.white.withValues(alpha: 0.2),
                     child: Text(
-                      profile?.firstName.substring(0, 1).toUpperCase() ?? 'U',
+                      profile.firstName.substring(0, 1).toUpperCase(),
                       style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -56,14 +55,14 @@ class SettingsPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        profile?.fullName ?? 'Unknown',
+                        profile.fullName,
                         style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                             fontSize: 17),
                       ),
                       Text(
-                        profile?.email ?? '',
+                        profile.email,
                         style: const TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                       Container(
@@ -74,7 +73,7 @@ class SettingsPage extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          profile?.role.name.toUpperCase() ?? '',
+                          profile.role.name.toUpperCase(),
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 11,
@@ -88,11 +87,14 @@ class SettingsPage extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // Profile info
-            _SectionHeader('Account Details'),
-            _InfoTile(Icons.person_outline_rounded, 'Name', profile?.fullName ?? '—'),
-            _InfoTile(Icons.email_outlined, 'Email', profile?.email ?? '—'),
-            _InfoTile(Icons.phone_outlined, 'Phone', profile?.phone ?? 'Not set'),
+            // Edit profile
+            _SettingsTile(
+              icon: Icons.edit_outlined,
+              title: 'Edit Profile',
+              subtitle: 'Update phone, email or password',
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textHint),
+              onTap: () => context.push(RouteNames.editProfile),
+            ),
             _Divider(),
 
             // Appearance
@@ -185,31 +187,6 @@ class _SectionHeader extends StatelessWidget {
 class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const SizedBox(height: 20);
-}
-
-class _InfoTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String value;
-  const _InfoTile(this.icon, this.title, this.value);
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 18, color: AppColors.primary),
-        ),
-        title: Text(title,
-            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-        subtitle: Text(value,
-            style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
-      );
 }
 
 class _SettingsTile extends StatelessWidget {

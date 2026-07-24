@@ -148,7 +148,7 @@ class _AttendanceMarkPageState extends ConsumerState<AttendanceMarkPage> {
                   ),
                   _BulkActions(onMarkAll: (status) {
                     setState(() {
-                      for (final d in _drafts.values) d.status = status;
+                      for (final d in _drafts.values) { d.status = status; }
                     });
                   }),
                   Expanded(
