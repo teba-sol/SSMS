@@ -2,19 +2,23 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useTeacherDetail } from './useTeachers'
 import { teacherService } from './teacherService'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/contexts/AuthContext'
+import { useStartConversation } from '@/features/messages/useMessages'
 import Breadcrumb from '@/components/Breadcrumb'
 import Spinner from '@/components/Spinner'
 import ErrorMessage from '@/components/ErrorMessage'
 import { Card, CardTitle } from '@/components/Card'
 import Button from '@/components/Button'
 import { formatDate } from '@/utils/formatters'
-import { BookOpen, Users, GraduationCap, Mail, Phone, Briefcase, Calendar } from 'lucide-react'
+import { BookOpen, Users, GraduationCap, Mail, Phone, Briefcase, Calendar, MessageSquare } from 'lucide-react'
 
 export default function TeacherDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { profile: authProfile } = useAuth()
   const { data, isLoading, error } = useTeacherDetail(id!)
   const queryClient = useQueryClient()
+  const startConversation = useStartConversation()
 
   const toggleMutation = useMutation({
     mutationFn: () => teacherService.toggleActive(id!, !data!.teacher.is_active),
@@ -30,6 +34,12 @@ export default function TeacherDetailPage() {
 
   const { teacher, assignments, stats } = data
   const profile = teacher.profiles
+
+  const handleSendMessage = async () => {
+    if (!profile || !profile.id || !authProfile?.id) return
+    const conversationId = await startConversation.mutateAsync({ userId1: authProfile.id, userId2: profile.id })
+    navigate(`/messages/${conversationId}`)
+  }
 
   return (
     <div>
@@ -48,6 +58,9 @@ export default function TeacherDetailPage() {
           <p className="text-sm text-slate-500 mt-1">{teacher.employee_id}</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="secondary" onClick={handleSendMessage} isLoading={startConversation.isPending}>
+            <MessageSquare size={16} /> Send Message
+          </Button>
           <Button onClick={() => navigate(`/teachers/${teacher.id}/edit`)}>Edit Teacher</Button>
           <Button
             variant="secondary"

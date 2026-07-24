@@ -1,0 +1,3158 @@
+openapi: 3.0.3
+info:
+  title: Student Status Checkup System (SSCS) API
+  description: |
+    Complete API documentation for the Student Status Checkup System.
+    
+    This system is built on **Supabase** (PostgreSQL + PostgREST + Auth + Row Level Security).
+    All table CRUD operations go through the Supabase PostgREST API.
+    Custom logic is handled by Supabase Edge Functions (Deno).
+    
+    ## Authentication
+    All requests require a valid Supabase JWT token via `Authorization: Bearer <token>`.
+    Obtain tokens via the Supabase Auth API (email/password sign-in).
+    
+    ## Role-Based Access Control
+    - **Administrator**: Full CRUD on all tables
+    - **Teacher**: Read profiles; manage attendance/results for assigned classes; read students in assigned classes
+    - **Parent**: Read own profile, children's data (attendance, results, enrollments)
+    
+    ## Base URL
+    `https://eiojnxxfzgrgnupaguwf.supabase.co`
+    
+    ## PostgREST API
+    Supabase auto-generates REST endpoints from the database schema:
+    - `GET /rest/v1/<table>` — List rows
+    - `GET /rest/v1/<table>?id=eq.<uuid>` — Get single row
+    - `POST /rest/v1/<table>` — Insert row(s)
+    - `PATCH /rest/v1/<table>?id=eq.<uuid>` — Update row
+    - `DELETE /rest/v1/<table>?id=eq.<uuid>` — Delete row
+    - `POST /rest/v1/rpc/<function_name>` — Call SQL RPC function
+  version: 1.0.0
+  contact:
+    name: SSCS Development Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://eiojnxxfzgrgnupaguwf.supabase.co
+    description: Supabase Production
+
+security:
+  - ApiKeyAuth: []
+    BearerAuth: []
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: apikey
+      description: |
+        Supabase anon/public key. Found in:
+        Supabase Dashboard → Settings → API → anon/public key.
+        Required on ALL requests.
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Supabase JWT token obtained from:
+        - `POST /auth/v1/token?grant_type=password` (sign in)
+        - `POST /auth/v1/signup` (register)
+        Include as: `Authorization: eyJhbGciOiJIUzI1NiIs...`
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+      description: Page number
+    PageSizeParam:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      description: Items per page
+    SearchParam:
+      name: search
+      in: query
+      schema:
+        type: string
+      description: Search term to filter results
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Resource UUID
+
+  schemas:
+    # ─── Auth ───────────────────────────────────────────
+    UserRole:
+      type: string
+      enum: [administrator, teacher, parent]
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+
+    AuthState:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUser'
+        profile:
+          $ref: '#/components/schemas/Profile'
+        isLoading:
+          type: boolean
+        isAuthenticated:
+          type: boolean
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+        role:
+          $ref: '#/components/schemas/UserRole'
+        is_active:
+          type: boolean
+        email_verified:
+          type: boolean
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProfileUpdate:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+        is_active:
+          type: boolean
+
+    # ─── Students ───────────────────────────────────────
+    Gender:
+      type: string
+      enum: [male, female, other]
+
+    Student:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          description: Auto-generated student identifier (e.g., STU-2024-001)
+        first_name:
+          type: string
+        middle_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/Gender'
+        address:
+          type: string
+          nullable: true
+        emergency_contact:
+          type: string
+          nullable: true
+        emergency_phone:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    StudentCreate:
+      type: object
+      required: [first_name, last_name, date_of_birth]
+      properties:
+        student_id:
+          type: string
+        first_name:
+          type: string
+        middle_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/Gender'
+        address:
+          type: string
+          nullable: true
+        emergency_contact:
+          type: string
+          nullable: true
+        emergency_phone:
+          type: string
+          nullable: true
+
+    StudentUpdate:
+      type: object
+      properties:
+        first_name:
+          type: string
+        middle_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/Gender'
+        address:
+          type: string
+          nullable: true
+        emergency_contact:
+          type: string
+          nullable: true
+        emergency_phone:
+          type: string
+          nullable: true
+
+    StudentWithEnrollment:
+      allOf:
+        - $ref: '#/components/schemas/Student'
+        - type: object
+          properties:
+            enrollments:
+              $ref: '#/components/schemas/StudentEnrollment'
+
+    # ─── Teachers ───────────────────────────────────────
+    Teacher:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        profile_id:
+          type: string
+          format: uuid
+          description: References profiles.id
+        employee_id:
+          type: string
+        department:
+          type: string
+          nullable: true
+        qualification:
+          type: string
+          nullable: true
+        hire_date:
+          type: string
+          format: date
+          nullable: true
+        is_active:
+          type: boolean
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TeacherUpdate:
+      type: object
+      properties:
+        department:
+          type: string
+          nullable: true
+        qualification:
+          type: string
+          nullable: true
+        hire_date:
+          type: string
+          format: date
+          nullable: true
+        is_active:
+          type: boolean
+
+    TeacherWithProfile:
+      allOf:
+        - $ref: '#/components/schemas/Teacher'
+        - type: object
+          properties:
+            profiles:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                  nullable: true
+                avatar_url:
+                  type: string
+                  nullable: true
+                is_active:
+                  type: boolean
+
+    # ─── Parents ────────────────────────────────────────
+    ParentStudent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        parent_id:
+          type: string
+          format: uuid
+          description: References profiles.id
+        student_id:
+          type: string
+          format: uuid
+          description: References students.id
+        relationship:
+          type: string
+          enum: [father, mother, guardian, other]
+        is_primary:
+          type: boolean
+        is_active:
+          type: boolean
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ParentStudentCreate:
+      type: object
+      required: [parent_id, student_id, relationship]
+      properties:
+        parent_id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        relationship:
+          type: string
+          enum: [father, mother, guardian, other]
+        is_primary:
+          type: boolean
+          default: false
+
+    ParentWithStudents:
+      allOf:
+        - $ref: '#/components/schemas/Profile'
+        - type: object
+          properties:
+            parent_students:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/ParentStudent'
+                  - type: object
+                    properties:
+                      students:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          first_name:
+                            type: string
+                          last_name:
+                            type: string
+                          student_id:
+                            type: string
+
+    # ─── Academic Years ─────────────────────────────────
+    AcademicYear:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: e.g., "2024-2025"
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        is_current:
+          type: boolean
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AcademicYearCreate:
+      type: object
+      required: [name, start_date, end_date]
+      properties:
+        name:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    AcademicYearUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        is_current:
+          type: boolean
+
+    # ─── Classes ────────────────────────────────────────
+    SchoolClass:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        academic_year_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: e.g., "Grade 10 - Section A"
+        grade_level:
+          type: integer
+          minimum: 1
+          maximum: 12
+        section:
+          type: string
+          nullable: true
+        capacity:
+          type: integer
+        room:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SchoolClassCreate:
+      type: object
+      required: [academic_year_id, name, grade_level, capacity]
+      properties:
+        academic_year_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        grade_level:
+          type: integer
+          minimum: 1
+          maximum: 12
+        section:
+          type: string
+          nullable: true
+        capacity:
+          type: integer
+        room:
+          type: string
+          nullable: true
+
+    SchoolClassUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        grade_level:
+          type: integer
+          minimum: 1
+          maximum: 12
+        section:
+          type: string
+          nullable: true
+        capacity:
+          type: integer
+        room:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+
+    SchoolClassWithYear:
+      allOf:
+        - $ref: '#/components/schemas/SchoolClass'
+        - type: object
+          properties:
+            academic_years:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                is_current:
+                  type: boolean
+
+    # ─── Subjects ───────────────────────────────────────
+    Subject:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+          description: e.g., "MATH101"
+        description:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    SubjectCreate:
+      type: object
+      required: [name, code]
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+
+    SubjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+
+    # ─── Teacher Assignments ────────────────────────────
+    TeacherAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        teacher_id:
+          type: string
+          format: uuid
+        class_id:
+          type: string
+          format: uuid
+        subject_id:
+          type: string
+          format: uuid
+        academic_year_id:
+          type: string
+          format: uuid
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    TeacherAssignmentCreate:
+      type: object
+      required: [teacher_id, class_id, subject_id, academic_year_id]
+      properties:
+        teacher_id:
+          type: string
+          format: uuid
+        class_id:
+          type: string
+          format: uuid
+        subject_id:
+          type: string
+          format: uuid
+        academic_year_id:
+          type: string
+          format: uuid
+
+    TeacherAssignmentWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/TeacherAssignment'
+        - type: object
+          properties:
+            teachers:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                employee_id:
+                  type: string
+                profiles:
+                  type: object
+                  properties:
+                    first_name:
+                      type: string
+                    last_name:
+                      type: string
+                    email:
+                      type: string
+            classes:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                grade_level:
+                  type: integer
+                section:
+                  type: string
+                  nullable: true
+            subjects:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                code:
+                  type: string
+            academic_years:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                is_current:
+                  type: boolean
+
+    # ─── Student Enrollments ────────────────────────────
+    EnrollmentStatus:
+      type: string
+      enum: [active, transferred, withdrawn, graduated]
+
+    StudentEnrollment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        class_id:
+          type: string
+          format: uuid
+        enrollment_date:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/EnrollmentStatus'
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    StudentEnrollmentCreate:
+      type: object
+      required: [student_id, class_id, enrollment_date]
+      properties:
+        student_id:
+          type: string
+          format: uuid
+        class_id:
+          type: string
+          format: uuid
+        enrollment_date:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/EnrollmentStatus'
+          default: active
+
+    StudentEnrollmentWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/StudentEnrollment'
+        - type: object
+          properties:
+            students:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                student_id:
+                  type: string
+            classes:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                grade_level:
+                  type: integer
+                section:
+                  type: string
+                  nullable: true
+
+    # ─── Attendance ─────────────────────────────────────
+    AttendanceStatus:
+      type: string
+      enum: [present, absent, late, excused]
+
+    Attendance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        class_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/AttendanceStatus'
+        marked_by:
+          type: string
+          format: uuid
+          description: Teacher ID who marked attendance
+        notes:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AttendanceCreate:
+      type: object
+      required: [student_id, class_id, date, status, marked_by]
+      properties:
+        student_id:
+          type: string
+          format: uuid
+        class_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/AttendanceStatus'
+        marked_by:
+          type: string
+          format: uuid
+        notes:
+          type: string
+          nullable: true
+
+    AttendanceUpsert:
+      type: object
+      description: Bulk upsert attendance records. Conflict on (student_id, class_id, date).
+      required: [records]
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceCreate'
+
+    AttendanceWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/Attendance'
+        - type: object
+          properties:
+            students:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                student_id:
+                  type: string
+            classes:
+              type: object
+              properties:
+                name:
+                  type: string
+                grade_level:
+                  type: integer
+                section:
+                  type: string
+                  nullable: true
+
+    # ─── Results ────────────────────────────────────────
+    ExamType:
+      type: string
+      enum: [midterm, final, quiz, assignment, project]
+
+    Result:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        teacher_assignment_id:
+          type: string
+          format: uuid
+        marks_obtained:
+          type: number
+          format: float
+          nullable: true
+        total_marks:
+          type: number
+          format: float
+          nullable: true
+        grade:
+          type: string
+          nullable: true
+          description: e.g., "A", "B+", "85%"
+        exam_type:
+          $ref: '#/components/schemas/ExamType'
+        exam_date:
+          type: string
+          format: date
+        remarks:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ResultCreate:
+      type: object
+      required: [student_id, teacher_assignment_id, exam_type, exam_date]
+      properties:
+        student_id:
+          type: string
+          format: uuid
+        teacher_assignment_id:
+          type: string
+          format: uuid
+        marks_obtained:
+          type: number
+          format: float
+          nullable: true
+        total_marks:
+          type: number
+          format: float
+          nullable: true
+        grade:
+          type: string
+          nullable: true
+        exam_type:
+          $ref: '#/components/schemas/ExamType'
+        exam_date:
+          type: string
+          format: date
+        remarks:
+          type: string
+          nullable: true
+
+    ResultUpdate:
+      type: object
+      properties:
+        marks_obtained:
+          type: number
+          format: float
+          nullable: true
+        total_marks:
+          type: number
+          format: float
+          nullable: true
+        grade:
+          type: string
+          nullable: true
+        exam_type:
+          $ref: '#/components/schemas/ExamType'
+        exam_date:
+          type: string
+          format: date
+        remarks:
+          type: string
+          nullable: true
+
+    ResultWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/Result'
+        - type: object
+          properties:
+            students:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                student_id:
+                  type: string
+            teacher_assignments:
+              type: object
+              properties:
+                classes:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    grade_level:
+                      type: integer
+                subjects:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    code:
+                      type: string
+
+    # ─── Announcements ──────────────────────────────────
+    TargetAudience:
+      type: string
+      enum: [all, teachers, parents]
+
+    Priority:
+      type: string
+      enum: [low, normal, high, urgent]
+
+    Announcement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        author_id:
+          type: string
+          format: uuid
+          description: References profiles.id
+        target_audience:
+          $ref: '#/components/schemas/TargetAudience'
+        class_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: If set, announcement targets this specific class
+        priority:
+          $ref: '#/components/schemas/Priority'
+        is_published:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AnnouncementCreate:
+      type: object
+      required: [title, content, target_audience, priority]
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        target_audience:
+          $ref: '#/components/schemas/TargetAudience'
+        class_id:
+          type: string
+          format: uuid
+          nullable: true
+        priority:
+          $ref: '#/components/schemas/Priority'
+          default: normal
+        is_published:
+          type: boolean
+          default: false
+
+    AnnouncementUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        target_audience:
+          $ref: '#/components/schemas/TargetAudience'
+        class_id:
+          type: string
+          format: uuid
+          nullable: true
+        priority:
+          $ref: '#/components/schemas/Priority'
+        is_published:
+          type: boolean
+
+    AnnouncementWithAuthor:
+      allOf:
+        - $ref: '#/components/schemas/Announcement'
+        - type: object
+          properties:
+            profiles:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+
+    # ─── Activities ─────────────────────────────────────
+    Activity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        activity_type:
+          type: string
+          description: e.g., "sports", "cultural", "academic", "field_trip"
+        activity_date:
+          type: string
+          format: date
+        location:
+          type: string
+          nullable: true
+        organizer_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Teacher profile ID
+        class_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: If null, activity is school-wide
+        academic_year_id:
+          type: string
+          format: uuid
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ActivityCreate:
+      type: object
+      required: [title, activity_type, activity_date, academic_year_id]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        activity_type:
+          type: string
+        activity_date:
+          type: string
+          format: date
+        location:
+          type: string
+          nullable: true
+        organizer_id:
+          type: string
+          format: uuid
+          nullable: true
+        class_id:
+          type: string
+          format: uuid
+          nullable: true
+        academic_year_id:
+          type: string
+          format: uuid
+
+    ActivityWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/Activity'
+        - type: object
+          properties:
+            organizer:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+            classes:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                grade_level:
+                  type: integer
+                section:
+                  type: string
+                  nullable: true
+            academic_years:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                is_current:
+                  type: boolean
+
+    # ─── Messages ───────────────────────────────────────
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        participant1_id:
+          type: string
+          format: uuid
+          description: Lower UUID (enforced by DB constraint)
+        participant2_id:
+          type: string
+          format: uuid
+          description: Higher UUID (enforced by DB constraint)
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ConversationCreate:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: The other participant's user ID
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    MessageCreate:
+      type: object
+      required: [sender_id, content]
+      properties:
+        sender_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+          minLength: 1
+
+    ConversationWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/Conversation'
+        - type: object
+          properties:
+            participant1:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                role:
+                  type: string
+            participant2:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                role:
+                  type: string
+            last_message:
+              type: object
+              nullable: true
+              properties:
+                content:
+                  type: string
+                sender_id:
+                  type: string
+                  format: uuid
+                created_at:
+                  type: string
+                  format: date-time
+
+    # ─── Notifications ──────────────────────────────────
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        body:
+          type: string
+        type:
+          type: string
+          description: e.g., "announcement", "grade", "attendance", "message"
+        reference_type:
+          type: string
+          nullable: true
+          description: e.g., "announcement", "result", "attendance"
+        reference_id:
+          type: string
+          format: uuid
+          nullable: true
+        action_url:
+          type: string
+          nullable: true
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    # ─── Dashboard ──────────────────────────────────────
+    DashboardStats:
+      type: object
+      properties:
+        totalStudents:
+          type: integer
+        totalTeachers:
+          type: integer
+        totalClasses:
+          type: integer
+        totalParents:
+          type: integer
+        totalEnrollments:
+          type: integer
+        currentAcademicYear:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            year_name:
+              type: string
+        recentAnnouncements:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              priority:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+        todayAttendance:
+          type: object
+          properties:
+            present:
+              type: integer
+            absent:
+              type: integer
+            late:
+              type: integer
+            excused:
+              type: integer
+        recentActivities:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              activity_type:
+                type: string
+              activity_date:
+                type: string
+                format: date
+
+    # ─── Pagination ─────────────────────────────────────
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        count:
+          type: integer
+          description: Total row count (from Supabase Range header)
+        page:
+          type: integer
+        pageSize:
+          type: integer
+
+    # ─── Edge Function Schemas ──────────────────────────
+    CreateUserRequest:
+      type: object
+      required: [email, password, role, first_name, last_name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        role:
+          $ref: '#/components/schemas/UserRole'
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        department:
+          type: string
+          nullable: true
+          description: For teachers only
+        qualification:
+          type: string
+          nullable: true
+          description: For teachers only
+        employee_id:
+          type: string
+          nullable: true
+          description: For teachers only
+
+    CreateUserResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+        profile:
+          $ref: '#/components/schemas/Profile'
+
+    LogoutRequest:
+      type: object
+      properties:
+        device_token:
+          type: string
+          description: FCM device token to deactivate
+
+    RpcResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "No authorization token"
+    Forbidden:
+      description: Insufficient permissions for this operation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Permission denied"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Resource not found"
+    BadRequest:
+      description: Invalid request body
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              details:
+                type: string
+
+tags:
+  - name: Authentication
+    description: Supabase Auth endpoints
+  - name: Profile
+    description: User profile management
+  - name: Students
+    description: Student records CRUD
+  - name: Teachers
+    description: Teacher records CRUD
+  - name: Parents
+    description: Parent records and student linking
+  - name: Academic Years
+    description: Academic year management
+  - name: Classes
+    description: School class management
+  - name: Subjects
+    description: Subject catalog management
+  - name: Teacher Assignments
+    description: Teacher-to-class-subject assignments
+  - name: Student Enrollments
+    description: Student-to-class enrollment management
+  - name: Attendance
+    description: Daily attendance tracking
+  - name: Results
+    description: Exam results and grades
+  - name: Announcements
+    description: School announcements
+  - name: Activities
+    description: Extracurricular activities
+  - name: Messages
+    description: Direct messaging between users
+  - name: Notifications
+    description: System notifications
+  - name: Dashboard
+    description: Dashboard statistics
+  - name: Edge Functions
+    description: Supabase Edge Functions (Deno)
+
+paths:
+  # ═══════════════════════════════════════════════════════
+  # AUTHENTICATION
+  # ═══════════════════════════════════════════════════════
+  /auth/v1/token:
+    post:
+      tags: [Authentication]
+      operationId: signIn
+      summary: Sign in with email and password
+      description: |
+        Authenticate a user and obtain a JWT access token.
+        This is the primary authentication endpoint.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT Bearer token
+                  token_type:
+                    type: string
+                    example: bearer
+                  expires_in:
+                    type: integer
+                    description: Token TTL in seconds
+                  expires_at:
+                    type: integer
+                  refresh_token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+        '400':
+          description: Invalid credentials
+      parameters:
+        - name: grant_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [password]
+          example: password
+
+  /auth/v1/signup:
+    post:
+      tags: [Authentication]
+      operationId: signUp
+      summary: Register a new user account
+      description: |
+        Create a new user account. Note: In this system, user creation
+        is typically done by admins via the create-user Edge Function.
+        Direct signup may be restricted by RLS policies.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+                data:
+                  type: object
+                  description: User metadata
+                  properties:
+                    first_name:
+                      type: string
+                    last_name:
+                      type: string
+      responses:
+        '200':
+          description: Account created (may require email confirmation)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+                  session:
+                    type: object
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/v1/logout:
+    post:
+      tags: [Authentication]
+      operationId: signOut
+      summary: Sign out and invalidate session
+      description: Signs out the current user and deactivates device tokens.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Signed out successfully
+
+  /auth/v1/recover:
+    post:
+      tags: [Authentication]
+      operationId: resetPassword
+      summary: Request password reset email
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Recovery email sent
+
+  /auth/v1/user:
+    get:
+      tags: [Authentication]
+      operationId: getCurrentUser
+      summary: Get current authenticated user
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+
+  # ═══════════════════════════════════════════════════════
+  # PROFILE
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/profiles:
+    get:
+      tags: [Profile]
+      operationId: getProfile
+      summary: Get current user's profile
+      description: Fetches the profile for the authenticated user (uses `id=eq.auth.uid()`).
+      responses:
+        '200':
+          description: Profile data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags: [Profile]
+      operationId: updateProfile
+      summary: Update current user's profile
+      description: Updates the profile for the authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ═══════════════════════════════════════════════════════
+  # STUDENTS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/students:
+    get:
+      tags: [Students]
+      operationId: listStudents
+      summary: List all students
+      description: |
+        Returns paginated list of students. Supports search on first_name, last_name, student_id.
+        Teachers only see students in their assigned classes.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: order
+          in: query
+          schema:
+            type: string
+            default: created_at.desc
+        - name: select
+          in: query
+          schema:
+            type: string
+          description: "Comma-separated columns to return. Use `*` or `*,enrollments(*,classes(*))` for joins."
+      responses:
+        '200':
+          description: List of students
+          headers:
+            Content-Range:
+              schema:
+                type: string
+              description: "Pagination range header (e.g., `0-19/150`)"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Student'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Students]
+      operationId: createStudent
+      summary: Create a new student
+      description: Creates a new student record. Only administrators can create students.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentCreate'
+      responses:
+        '201':
+          description: Student created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /rest/v1/students?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Students]
+      operationId: getStudentById
+      summary: Get student by ID
+      responses:
+        '200':
+          description: Student details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Student'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Students]
+      operationId: updateStudent
+      summary: Update a student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentUpdate'
+      responses:
+        '200':
+          description: Updated student
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    delete:
+      tags: [Students]
+      operationId: deleteStudent
+      summary: Delete a student
+      responses:
+        '204':
+          description: Student deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ═══════════════════════════════════════════════════════
+  # TEACHERS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/teachers:
+    get:
+      tags: [Teachers]
+      operationId: listTeachers
+      summary: List all teachers
+      description: Returns paginated list of teachers with profile data joined.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: select
+          in: query
+          schema:
+            type: string
+          description: "Use `*,profiles(*)` to include profile data"
+      responses:
+        '200':
+          description: List of teachers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeacherWithProfile'
+
+  /rest/v1/teachers?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Teachers]
+      operationId: getTeacherById
+      summary: Get teacher by ID
+      responses:
+        '200':
+          description: Teacher details with profile
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeacherWithProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Teachers]
+      operationId: updateTeacher
+      summary: Update a teacher record
+      description: Updates teacher-specific fields (department, qualification, hire_date, is_active).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeacherUpdate'
+      responses:
+        '200':
+          description: Updated teacher
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Teacher'
+
+  # ═══════════════════════════════════════════════════════
+  # PARENTS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/profiles?role=eq.parent:
+    get:
+      tags: [Parents]
+      operationId: listParents
+      summary: List all parents
+      description: |
+        Returns paginated list of parent profiles with their linked students.
+        Filters profiles table by role='parent'.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+      responses:
+        '200':
+          description: List of parents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParentWithStudents'
+
+  /rest/v1/parent_students:
+    get:
+      tags: [Parents]
+      operationId: listParentStudents
+      summary: List parent-student relationships
+      parameters:
+        - name: parent_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by parent ID
+      responses:
+        '200':
+          description: Parent-student relationships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParentStudent'
+
+    post:
+      tags: [Parents]
+      operationId: linkStudentToParent
+      summary: Link a student to a parent
+      description: Creates a parent-student relationship.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParentStudentCreate'
+      responses:
+        '201':
+          description: Link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParentStudent'
+
+  /rest/v1/parent_students?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [Parents]
+      operationId: updateParentStudentLink
+      summary: Update parent-student link
+      description: Soft-deactivate or update relationship.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_active:
+                  type: boolean
+                relationship:
+                  type: string
+                  enum: [father, mother, guardian, other]
+      responses:
+        '200':
+          description: Updated link
+
+    delete:
+      tags: [Parents]
+      operationId: unlinkStudentFromParent
+      summary: Remove parent-student link
+      responses:
+        '204':
+          description: Link removed
+
+  # ═══════════════════════════════════════════════════════
+  # ACADEMIC YEARS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/academic_years:
+    get:
+      tags: [Academic Years]
+      operationId: listAcademicYears
+      summary: List all academic years
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: order
+          in: query
+          schema:
+            type: string
+            default: start_date.desc
+      responses:
+        '200':
+          description: List of academic years
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicYear'
+
+    post:
+      tags: [Academic Years]
+      operationId: createAcademicYear
+      summary: Create a new academic year
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicYearCreate'
+      responses:
+        '201':
+          description: Academic year created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicYear'
+
+  /rest/v1/academic_years?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Academic Years]
+      operationId: getAcademicYearById
+      summary: Get academic year by ID
+      responses:
+        '200':
+          description: Academic year details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicYear'
+
+    patch:
+      tags: [Academic Years]
+      operationId: updateAcademicYear
+      summary: Update an academic year
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicYearUpdate'
+      responses:
+        '200':
+          description: Updated academic year
+
+    delete:
+      tags: [Academic Years]
+      operationId: deleteAcademicYear
+      summary: Delete an academic year
+      responses:
+        '204':
+          description: Deleted
+
+  # ═══════════════════════════════════════════════════════
+  # CLASSES
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/classes:
+    get:
+      tags: [Classes]
+      operationId: listClasses
+      summary: List all classes
+      description: Returns paginated classes with academic year data joined.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: academic_year_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by academic year
+      responses:
+        '200':
+          description: List of classes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SchoolClassWithYear'
+
+    post:
+      tags: [Classes]
+      operationId: createClass
+      summary: Create a new class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchoolClassCreate'
+      responses:
+        '201':
+          description: Class created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchoolClass'
+
+  /rest/v1/classes?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Classes]
+      operationId: getClassById
+      summary: Get class by ID
+      responses:
+        '200':
+          description: Class details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SchoolClassWithYear'
+
+    patch:
+      tags: [Classes]
+      operationId: updateClass
+      summary: Update a class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchoolClassUpdate'
+      responses:
+        '200':
+          description: Updated class
+
+    delete:
+      tags: [Classes]
+      operationId: deleteClass
+      summary: Delete a class
+      responses:
+        '204':
+          description: Deleted
+
+  # ═══════════════════════════════════════════════════════
+  # SUBJECTS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/subjects:
+    get:
+      tags: [Subjects]
+      operationId: listSubjects
+      summary: List all subjects
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active status
+      responses:
+        '200':
+          description: List of subjects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subject'
+
+    post:
+      tags: [Subjects]
+      operationId: createSubject
+      summary: Create a new subject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubjectCreate'
+      responses:
+        '201':
+          description: Subject created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subject'
+
+  /rest/v1/subjects?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Subjects]
+      operationId: getSubjectById
+      summary: Get subject by ID
+      responses:
+        '200':
+          description: Subject details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subject'
+
+    patch:
+      tags: [Subjects]
+      operationId: updateSubject
+      summary: Update a subject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubjectUpdate'
+      responses:
+        '200':
+          description: Updated subject
+
+    delete:
+      tags: [Subjects]
+      operationId: deleteSubject
+      summary: Delete a subject
+      responses:
+        '204':
+          description: Deleted
+
+  # ═══════════════════════════════════════════════════════
+  # TEACHER ASSIGNMENTS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/teacher_assignments:
+    get:
+      tags: [Teacher Assignments]
+      operationId: listTeacherAssignments
+      summary: List all teacher assignments
+      description: Returns assignments joined with teachers, classes, subjects, and academic years.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: teacher_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by teacher
+        - name: class_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by class
+      responses:
+        '200':
+          description: List of teacher assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeacherAssignmentWithRelations'
+
+    post:
+      tags: [Teacher Assignments]
+      operationId: createTeacherAssignment
+      summary: Assign a teacher to a class-subject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeacherAssignmentCreate'
+      responses:
+        '201':
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherAssignment'
+
+  /rest/v1/teacher_assignments?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Teacher Assignments]
+      operationId: getTeacherAssignmentById
+      summary: Get assignment by ID
+      responses:
+        '200':
+          description: Assignment details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeacherAssignmentWithRelations'
+
+    delete:
+      tags: [Teacher Assignments]
+      operationId: deleteTeacherAssignment
+      summary: Remove a teacher assignment
+      responses:
+        '204':
+          description: Deleted
+
+  # ═══════════════════════════════════════════════════════
+  # STUDENT ENROLLMENTS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/student_enrollments:
+    get:
+      tags: [Student Enrollments]
+      operationId: listStudentEnrollments
+      summary: List all student enrollments
+      description: Returns enrollments joined with student and class data.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: class_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by class
+        - name: student_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by student
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/EnrollmentStatus'
+          description: Filter by status
+      responses:
+        '200':
+          description: List of enrollments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudentEnrollmentWithRelations'
+
+    post:
+      tags: [Student Enrollments]
+      operationId: createStudentEnrollment
+      summary: Enroll a student in a class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentEnrollmentCreate'
+      responses:
+        '201':
+          description: Enrollment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentEnrollment'
+
+  /rest/v1/student_enrollments?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Student Enrollments]
+      operationId: getStudentEnrollmentById
+      summary: Get enrollment by ID
+      responses:
+        '200':
+          description: Enrollment details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudentEnrollmentWithRelations'
+
+    patch:
+      tags: [Student Enrollments]
+      operationId: updateStudentEnrollment
+      summary: Update enrollment status
+      description: Change status (active, transferred, withdrawn, graduated).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/EnrollmentStatus'
+      responses:
+        '200':
+          description: Updated enrollment
+
+    delete:
+      tags: [Student Enrollments]
+      operationId: deleteStudentEnrollment
+      summary: Delete an enrollment
+      responses:
+        '204':
+          description: Deleted
+
+  # ═══════════════════════════════════════════════════════
+  # ATTENDANCE
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/attendance:
+    get:
+      tags: [Attendance]
+      operationId: listAttendance
+      summary: List attendance records
+      description: Returns paginated attendance with student and class data.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: class_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by class (required for most queries)
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by date
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/AttendanceStatus'
+          description: Filter by status
+        - name: student_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by student
+        - name: order
+          in: query
+          schema:
+            type: string
+            default: date.desc
+      responses:
+        '200':
+          description: List of attendance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttendanceWithRelations'
+
+  /rest/v1/attendance/rpc/upsert:
+    post:
+      tags: [Attendance]
+      operationId: upsertAttendance
+      summary: Bulk upsert attendance records
+      description: |
+        Bulk insert or update attendance records for a class on a specific date.
+        Uses UPSERT with conflict resolution on (student_id, class_id, date).
+        Teachers can only mark attendance for their assigned classes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceUpsert'
+      responses:
+        '200':
+          description: Attendance records upserted
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Attendance'
+
+  # ═══════════════════════════════════════════════════════
+  # RESULTS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/results:
+    get:
+      tags: [Results]
+      operationId: listResults
+      summary: List exam results
+      description: Returns results joined with student and teacher assignment data.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: student_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by student
+        - name: exam_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ExamType'
+          description: Filter by exam type
+        - name: teacher_assignment_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by teacher assignment
+      responses:
+        '200':
+          description: List of results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResultWithRelations'
+
+    post:
+      tags: [Results]
+      operationId: createResult
+      summary: Create an exam result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResultCreate'
+      responses:
+        '201':
+          description: Result created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+
+  /rest/v1/results?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Results]
+      operationId: getResultById
+      summary: Get result by ID
+      responses:
+        '200':
+          description: Result details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResultWithRelations'
+
+    patch:
+      tags: [Results]
+      operationId: updateResult
+      summary: Update an exam result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResultUpdate'
+      responses:
+        '200':
+          description: Updated result
+
+    delete:
+      tags: [Results]
+      operationId: deleteResult
+      summary: Delete an exam result
+      responses:
+        '204':
+          description: Deleted
+
+  # ═══════════════════════════════════════════════════════
+  # ANNOUNCEMENTS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/announcements:
+    get:
+      tags: [Announcements]
+      operationId: listAnnouncements
+      summary: List all announcements
+      description: Returns announcements with author profile data.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: is_published
+          in: query
+          schema:
+            type: boolean
+          description: Filter by publish status
+        - name: target_audience
+          in: query
+          schema:
+            $ref: '#/components/schemas/TargetAudience'
+      responses:
+        '200':
+          description: List of announcements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnnouncementWithAuthor'
+
+    post:
+      tags: [Announcements]
+      operationId: createAnnouncement
+      summary: Create a new announcement
+      description: Author ID is automatically set from the authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnouncementCreate'
+      responses:
+        '201':
+          description: Announcement created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+
+  /rest/v1/announcements?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Announcements]
+      operationId: getAnnouncementById
+      summary: Get announcement by ID
+      responses:
+        '200':
+          description: Announcement details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnnouncementWithAuthor'
+
+    patch:
+      tags: [Announcements]
+      operationId: updateAnnouncement
+      summary: Update an announcement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnouncementUpdate'
+      responses:
+        '200':
+          description: Updated announcement
+
+    delete:
+      tags: [Announcements]
+      operationId: deleteAnnouncement
+      summary: Delete an announcement
+      responses:
+        '204':
+          description: Deleted
+
+  # ═══════════════════════════════════════════════════════
+  # ACTIVITIES
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/activities:
+    get:
+      tags: [Activities]
+      operationId: listActivities
+      summary: List all activities
+      description: Returns activities with organizer, class, and academic year data.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: class_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by class
+        - name: academic_year_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by academic year
+      responses:
+        '200':
+          description: List of activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActivityWithRelations'
+
+    post:
+      tags: [Activities]
+      operationId: createActivity
+      summary: Create a new activity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityCreate'
+      responses:
+        '201':
+          description: Activity created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+
+  /rest/v1/activities?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    delete:
+      tags: [Activities]
+      operationId: deleteActivity
+      summary: Delete an activity
+      responses:
+        '204':
+          description: Deleted
+
+  # ═══════════════════════════════════════════════════════
+  # MESSAGES
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/conversations:
+    get:
+      tags: [Messages]
+      operationId: listConversations
+      summary: List user's conversations
+      description: Returns conversations where the current user is a participant.
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConversationWithRelations'
+
+    post:
+      tags: [Messages]
+      operationId: startConversation
+      summary: Start a new conversation
+      description: |
+        Creates a new conversation or returns existing one between two users.
+        Enforces participant ordering (lower UUID as participant1).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreate'
+      responses:
+        '200':
+          description: Conversation created or found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /rest/v1/messages:
+    get:
+      tags: [Messages]
+      operationId: listMessages
+      summary: Get messages for a conversation
+      parameters:
+        - name: conversation_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Conversation ID
+        - name: order
+          in: query
+          schema:
+            type: string
+            default: created_at.asc
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 100
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+
+    post:
+      tags: [Messages]
+      operationId: sendMessage
+      summary: Send a message
+      description: |
+        Sends a message and updates the conversation's last_message_at timestamp.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversation_id, sender_id, content]
+              properties:
+                conversation_id:
+                  type: string
+                  format: uuid
+                sender_id:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+                  minLength: 1
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  # ═══════════════════════════════════════════════════════
+  # NOTIFICATIONS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/notifications:
+    get:
+      tags: [Notifications]
+      operationId: listNotifications
+      summary: List user's notifications
+      description: Returns notifications for the authenticated user.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: is_read
+          in: query
+          schema:
+            type: boolean
+          description: Filter by read status
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+
+  /rest/v1/notifications?id=eq.{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [Notifications]
+      operationId: markNotificationAsRead
+      summary: Mark notification as read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_read:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Updated
+
+  /rest/v1/notifications/rpc/mark_all_read:
+    post:
+      tags: [Notifications]
+      operationId: markAllNotificationsAsRead
+      summary: Mark all notifications as read
+      description: Marks all unread notifications for the current user as read.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: All notifications marked as read
+
+  # ═══════════════════════════════════════════════════════
+  # DASHBOARD
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/rpc/get_dashboard_stats:
+    post:
+      tags: [Dashboard]
+      operationId: getDashboardStats
+      summary: Get dashboard statistics
+      description: |
+        Returns aggregated stats for the dashboard:
+        total students, teachers, classes, parents, enrollments,
+        current academic year, recent announcements, today's attendance, recent activities.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+
+  # ═══════════════════════════════════════════════════════
+  # RPC FUNCTIONS
+  # ═══════════════════════════════════════════════════════
+  /rest/v1/rpc/set_current_academic_year:
+    post:
+      tags: [Academic Years]
+      operationId: setCurrentAcademicYear
+      summary: Set current academic year
+      description: |
+        Changes which academic year is marked as current.
+        Only one year can be current at a time.
+        SECURITY DEFINER function — admin only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [year_id]
+              properties:
+                year_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: boolean
+
+  /rest/v1/rpc/get_user_role:
+    post:
+      tags: [Authentication]
+      operationId: getUserRole
+      summary: Get current user's role
+      description: Returns the role of the authenticated user from the profiles table.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: User role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRole'
+
+  # ═══════════════════════════════════════════════════════
+  # EDGE FUNCTIONS
+  # ═══════════════════════════════════════════════════════
+  /functions/v1/create-user:
+    post:
+      tags: [Edge Functions]
+      operationId: createUser
+      summary: Create a new user account (Admin only)
+      description: |
+        Admin-only edge function to create teacher or parent accounts.
+        Creates auth user, profile, and optionally a teacher record.
+        Requires `Authorization: Bearer <admin-jwt>` and uses service role key internally.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '200':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /functions/v1/logout:
+    post:
+      tags: [Edge Functions]
+      operationId: edgeLogout
+      summary: Logout and deactivate device tokens
+      description: |
+        Deactivates all FCM device tokens for the user on logout.
+        Requires valid JWT in Authorization header.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logged out successfully
