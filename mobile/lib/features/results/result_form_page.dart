@@ -143,7 +143,7 @@ class _ResultFormPageState extends ConsumerState<ResultFormPage> {
                         ),
                         items: students.map((s) => DropdownMenuItem(
                           value: s,
-                          child: Text(s.fullName),
+                          child: Text('${s.fullName} (${s.studentId})'),
                         )).toList(),
                         onChanged: (s) => setState(() => _selectedStudent = s),
                         validator: (v) => v == null ? 'Please select a student' : null,

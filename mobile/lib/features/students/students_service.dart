@@ -12,7 +12,6 @@ class StudentsService {
     final userId = AppSupabase.currentUser?.id;
     if (userId == null) return null;
 
-    // Fetch teacher row without embedding profiles (avoids PGRST201 ambiguous FK error)
     final teacherData = await _client
         .from(AppTables.teachers)
         .select('id, profile_id, employee_id, department, qualification, hire_date, is_active')
@@ -21,7 +20,6 @@ class StudentsService {
 
     if (teacherData == null) return null;
 
-    // Fetch profile separately using the known profile_id
     final profileData = await _client
         .from(AppTables.profiles)
         .select()
@@ -37,8 +35,7 @@ class StudentsService {
   }
 
   /// Get all assignments for the current teacher
-  Future<List<TeacherAssignment>> getTeacherAssignments(
-      String teacherId) async {
+  Future<List<TeacherAssignment>> getTeacherAssignments(String teacherId) async {
     final data = await _client
         .from(AppTables.teacherAssignments)
         .select(
@@ -50,14 +47,11 @@ class StudentsService {
 
     final assignments = (data as List).map((e) => TeacherAssignment.fromJson(e)).toList();
 
-    // If any assignment is missing class/subject data (ambiguous FK fallback),
-    // fetch them separately by their IDs
     final missingClassData = assignments.any((a) => a.classData == null);
     final missingSubjectData = assignments.any((a) => a.subjectData == null);
 
     if (!missingClassData && !missingSubjectData) return assignments;
 
-    // Fetch classes separately
     Map<String, Map<String, dynamic>> classMap = {};
     Map<String, Map<String, dynamic>> subjectMap = {};
 
@@ -95,44 +89,93 @@ class StudentsService {
     )).toList();
   }
 
-  /// Get all students in a class
+  /// Get all students in a class.
+  ///
+  /// Uses a TWO-STEP fetch to avoid Supabase RLS infinite recursion:
+  ///   Step 1 → query student_enrollments for the class_id (gets student IDs only).
+  ///   Step 2 → query students by those IDs.
+  ///
+  /// Direct embedding (student_enrollments → students) triggers the parent_students
+  /// RLS policy chain which loops back on itself (code 42P17).
   Future<List<Student>> getStudentsInClass(String classId) async {
-    final data = await _client
+    // Step 1: Get just the student IDs enrolled in this class
+    final enrollments = await _client
         .from(AppTables.studentEnrollments)
-        .select(
-            'students(id, student_id, first_name, middle_name, last_name, date_of_birth, gender, address, emergency_contact, emergency_phone, created_at, updated_at)')
+        .select('student_id')
         .eq('class_id', classId)
         .eq('status', 'active');
+
+    final studentIds = (enrollments as List)
+        .map((e) => (e as Map<String, dynamic>)['student_id'] as String)
+        .toList();
+
+    if (studentIds.isEmpty) return [];
+
+    // Step 2: Fetch full student records by their IDs
+    final data = await _client
+        .from(AppTables.students)
+        .select('id, student_id, first_name, middle_name, last_name, date_of_birth, gender, address, emergency_contact, emergency_phone, created_at, updated_at')
+        .inFilter('id', studentIds)
+        .order('last_name')
+        .order('first_name');
+
     return (data as List)
-        .map((e) => Student.fromJson(e['students'] as Map<String, dynamic>))
+        .map((e) => Student.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
-  /// Get children linked to a parent
+  /// Get children linked to a parent.
+  ///
+  /// Also uses a TWO-STEP fetch — embedding students inside parent_students
+  /// creates the same RLS recursion loop (parent_students → students RLS →
+  /// parent_students again).
   Future<List<ParentStudent>> getChildrenForParent(String parentId) async {
-    final data = await _client
+    // Step 1: Get parent-student link records (no student embedding)
+    final psData = await _client
         .from(AppTables.parentStudents)
-        .select(
-            '*, students(id, student_id, first_name, middle_name, last_name, date_of_birth, gender, address, emergency_contact, emergency_phone, created_at, updated_at)')
+        .select('id, parent_id, student_id, relationship, is_primary, is_active')
         .eq('parent_id', parentId)
         .eq('is_active', true);
-    return (data as List).map((e) => ParentStudent.fromJson(e)).toList();
+
+    final psList = (psData as List)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+
+    if (psList.isEmpty) return [];
+
+    // Step 2: Fetch students separately by their IDs
+    final studentIds = psList.map((e) => e['student_id'] as String).toList();
+    final studentsData = await _client
+        .from(AppTables.students)
+        .select('id, student_id, first_name, middle_name, last_name, date_of_birth, gender, address, emergency_contact, emergency_phone, created_at, updated_at')
+        .inFilter('id', studentIds);
+
+    final studentsMap = <String, Map<String, dynamic>>{};
+    for (final s in studentsData as List) {
+      final sm = s as Map<String, dynamic>;
+      studentsMap[sm['id'] as String] = sm;
+    }
+
+    return psList.map((ps) {
+      return ParentStudent.fromJson({
+        ...ps,
+        'students': studentsMap[ps['student_id'] as String],
+      });
+    }).toList();
   }
 
   /// Get parents linked to a specific student (for teacher use)
   Future<List<ParentStudent>> getParentsForStudent(String studentId) async {
     final data = await _client
         .from(AppTables.parentStudents)
-        .select(
-            'id, parent_id, student_id, relationship, is_primary, is_active')
+        .select('id, parent_id, student_id, relationship, is_primary, is_active')
         .eq('student_id', studentId)
         .eq('is_active', true);
     return (data as List).map((e) => ParentStudent.fromJson(e)).toList();
   }
 
   /// Get current class enrollment for a student
-  Future<Map<String, dynamic>?> getStudentCurrentClass(
-      String studentId) async {
+  Future<Map<String, dynamic>?> getStudentCurrentClass(String studentId) async {
     final data = await _client
         .from(AppTables.studentEnrollments)
         .select('*, classes(id, name, grade_level, section, academic_year_id, academic_years(name, is_current))')

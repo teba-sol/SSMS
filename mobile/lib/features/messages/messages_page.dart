@@ -414,9 +414,9 @@ class _ParentPickerSheet extends ConsumerWidget {
                 children: parents.map((p) {
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
+                    leading: const CircleAvatar(
                       backgroundColor: AppColors.secondaryLight,
-                      child: const Icon(Icons.person_rounded,
+                      child: Icon(Icons.person_rounded,
                           color: AppColors.secondary),
                     ),
                     title: Text(p.relationship.label,

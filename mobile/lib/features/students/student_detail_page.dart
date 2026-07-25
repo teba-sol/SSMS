@@ -496,10 +496,11 @@ class _MarksTab extends ConsumerWidget {
                 children: [
                   const Icon(Icons.info_outline_rounded, size: 14, color: AppColors.primary),
                   const SizedBox(width: 8),
-                  Expanded(
+                  const Expanded(
                     child: Text(
-                      'Total = Mid(25%) + Final(35%) + Quiz(15%) + Assign(15%) + Project(10%)',
-                      style: const TextStyle(fontSize: 11, color: AppColors.primary),
+                      'Total = Mid(25%) + Final(35%) + Quiz(15%) + Assign(15%) + Project(10%). '
+                      '"~" means some assessments are still pending.',
+                      style: TextStyle(fontSize: 11, color: AppColors.primary),
                     ),
                   ),
                 ],
@@ -531,7 +532,9 @@ class _SubjectMarksCard extends StatelessWidget {
     return filtered.map((r) => r.percentage!).reduce((a, b) => a + b) / filtered.length;
   }
 
-  // Weighted total out of 100 — null if ANY type has no entry yet
+  // Weighted running total out of 100.
+  // Returns a value even if some exam types are missing (based on weight covered).
+  // Returns null only if NO exams have been entered at all.
   double? _total() {
     double total = 0;
     double weightCovered = 0;
@@ -543,10 +546,13 @@ class _SubjectMarksCard extends StatelessWidget {
       }
     }
     if (weightCovered == 0) return null;
-    // Return proportional score — null means incomplete until all types have data
-    final allPresent = _examWeights.keys.every((t) => _avgPct(t) != null);
-    return allPresent ? total : null;
+    // Scale to 100 based on weight covered so far
+    return (total / weightCovered) * 100;
   }
+
+  // True only when all exam types have at least one entry
+  bool get _isComplete =>
+      _examWeights.keys.every((t) => _avgPct(t) != null);
 
   Color _gradeColor(double pct) {
     if (pct >= 90) return AppColors.gradeA;
@@ -572,6 +578,7 @@ class _SubjectMarksCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = _total();
+    final isComplete = _isComplete;
     final totalColor = total != null ? _gradeColor(total) : AppColors.textSecondary;
 
     return Container(
@@ -587,9 +594,9 @@ class _SubjectMarksCard extends StatelessWidget {
           // Subject header + total
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.secondaryLight,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
             ),
             child: Row(
               children: [
@@ -622,7 +629,7 @@ class _SubjectMarksCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          _gradeLabel(total),
+                          isComplete ? _gradeLabel(total) : '~',
                           style: const TextStyle(
                               color: Colors.white70,
                               fontWeight: FontWeight.w600,
@@ -639,7 +646,7 @@ class _SubjectMarksCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
-                      'Incomplete',
+                      'No results yet',
                       style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 11,
@@ -978,7 +985,7 @@ class _StudentLogTabState extends ConsumerState<_StudentLogTab> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.warningLight,
                       shape: BoxShape.circle,
                     ),

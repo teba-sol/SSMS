@@ -15,11 +15,16 @@ class SettingsPage extends ConsumerWidget {
     final profile = ref.watch(currentProfileProvider);
     final authNotifier = ref.read(authProvider.notifier);
 
+    // Determine correct fallback route based on role
+    final fallback = profile?.role == UserRole.parent
+        ? RouteNames.parentDashboard
+        : RouteNames.teacherDashboard;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.canPop() ? context.pop() : context.go(RouteNames.teacherStudents),
+          onPressed: () => context.canPop() ? context.pop() : context.go(fallback),
         ),
         title: const Text('Settings & Profile'),
       ),
@@ -98,7 +103,7 @@ class SettingsPage extends ConsumerWidget {
             _Divider(),
 
             // Appearance
-            _SectionHeader('Appearance'),
+            const _SectionHeader('Appearance'),
             _SettingsTile(
               icon: Icons.dark_mode_outlined,
               title: 'Dark Mode',
@@ -111,13 +116,13 @@ class SettingsPage extends ConsumerWidget {
             _Divider(),
 
             // About
-            _SectionHeader('About'),
-            _SettingsTile(
+            const _SectionHeader('About'),
+            const _SettingsTile(
               icon: Icons.info_outline_rounded,
               title: 'App Version',
               subtitle: '1.0.0',
             ),
-            _SettingsTile(
+            const _SettingsTile(
               icon: Icons.school_outlined,
               title: 'School',
               subtitle: 'Hamle Elementary School',

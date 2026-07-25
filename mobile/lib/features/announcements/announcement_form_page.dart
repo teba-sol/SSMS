@@ -66,7 +66,7 @@ class _AnnouncementFormPageState
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.class_, color: AppColors.primary, size: 18),
+                    const Icon(Icons.class_, color: AppColors.primary, size: 18),
                     const SizedBox(width: 10),
                     Text('For: ${widget.className}',
                         style: const TextStyle(

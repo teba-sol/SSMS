@@ -7,23 +7,39 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/loading_widget.dart';
 import '../../core/widgets/app_card.dart';
+import '../../models/teacher_model.dart';
 import '../auth/auth_provider.dart';
 import '../students/students_provider.dart';
 import '../notifications/notifications_provider.dart';
 import '../announcements/announcements_provider.dart';
 
-class TeacherDashboardPage extends ConsumerWidget {
+class TeacherDashboardPage extends ConsumerStatefulWidget {
   const TeacherDashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeacherDashboardPage> createState() => _TeacherDashboardPageState();
+}
+
+class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
+  Future<void> _refresh() async {
+    ref.invalidate(currentTeacherProvider);
+    ref.invalidate(teacherAssignmentsProvider);
+    ref.invalidate(announcementsProvider);
+    // Wait for the main data to settle
+    await ref.read(teacherAssignmentsProvider.future).catchError((_) => <TeacherAssignment>[]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profile = ref.watch(currentProfileProvider);
     final teacherAsync = ref.watch(currentTeacherProvider);
     final assignmentsAsync = ref.watch(teacherAssignmentsProvider);
     final unreadNotif = ref.watch(unreadNotificationsCountProvider);
 
     return Scaffold(
-      body: CustomScrollView(
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: CustomScrollView(
         slivers: [
           // Header
           SliverAppBar(
@@ -109,6 +125,11 @@ class TeacherDashboardPage extends ConsumerWidget {
                                     ],
                                   ),
                                   IconButton(
+                                    onPressed: _refresh,
+                                    icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                                    tooltip: 'Refresh',
+                                  ),
+                                  IconButton(
                                     onPressed: () => context.push(RouteNames.settings),
                                     icon: const Icon(Icons.settings_outlined, color: Colors.white),
                                   ),
@@ -171,23 +192,26 @@ class TeacherDashboardPage extends ConsumerWidget {
                         return const Text('No classes assigned',
                             style: TextStyle(color: AppColors.textSecondary));
                       }
-                      // Group by class
-                      final byClass = <String, List<dynamic>>{};
-                      for (final a in assignments) {
-                        byClass.putIfAbsent(a.classId, () => []).add(a);
-                      }
                       return Column(
-                        children: byClass.entries.take(3).map((e) {
-                          final first = e.value.first;
+                        children: assignments.take(3).map((a) {
                           return _ClassCard(
-                            assignment: first,
-                            subjectCount: e.value.length,
+                            assignment: a,
                           );
                         }).toList(),
                       );
                     },
                     loading: () => const ShimmerList(count: 2, itemHeight: 100),
-                    error: (e, _) => Text('$e'),
+                    error: (e, _) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: AppColors.error, size: 16),
+                          const SizedBox(width: 8),
+                          const Expanded(child: Text('Failed to load classes', style: TextStyle(color: AppColors.error, fontSize: 13))),
+                          TextButton(onPressed: _refresh, child: const Text('Retry')),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
 
@@ -219,6 +243,7 @@ class TeacherDashboardPage extends ConsumerWidget {
                             value: '$subjects',
                             icon: Icons.book_outlined,
                             color: AppColors.secondary,
+                            onTap: () => context.go(RouteNames.teacherStudents),
                           ),
                           StatCard(
                             title: 'Messages',
@@ -252,6 +277,7 @@ class TeacherDashboardPage extends ConsumerWidget {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -266,8 +292,9 @@ class TeacherDashboardPage extends ConsumerWidget {
 class _QuickActionsRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final actions = [
-      (Icons.fact_check_rounded, 'Mark\nAttendance', AppColors.primary,
+    // Row 1: Primary actions
+    final row1 = [
+      (Icons.fact_check_rounded, 'Mark\nAttend', AppColors.primary,
           const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)]),
           RouteNames.teacherAttendance),
       (Icons.add_chart_rounded, 'Add\nResult', AppColors.secondary,
@@ -280,53 +307,56 @@ class _QuickActionsRow extends ConsumerWidget {
           const LinearGradient(colors: [Color(0xFFEA580C), Color(0xFFDC2626)]),
           RouteNames.teacherAnnouncements),
     ];
-    return Row(
-      children: actions.map((a) {
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => context.go(a.$5),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                gradient: a.$4,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: a.$3.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+
+    Widget actionButton(
+        IconData icon, String label, Color color, LinearGradient grad, String route) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => context.go(route),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              gradient: grad,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Icon(icon, color: Colors.white, size: 22),
+                const SizedBox(height: 5),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    height: 1.3,
                   ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Icon(a.$1, color: Colors.white, size: 24),
-                  const SizedBox(height: 6),
-                  Text(
-                    a.$2,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        );
-      }).toList(),
+        ),
+      );
+    }
+
+    return Row(
+      children: row1.map((a) => actionButton(a.$1, a.$2, a.$3, a.$4, a.$5)).toList(),
     );
   }
 }
 
 class _ClassCard extends StatelessWidget {
   final dynamic assignment;
-  final int subjectCount;
-  const _ClassCard({required this.assignment, required this.subjectCount});
+  const _ClassCard({required this.assignment});
 
   @override
   Widget build(BuildContext context) {
@@ -344,7 +374,7 @@ class _ClassCard extends StatelessWidget {
                   color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.class_,
+                child: const Icon(Icons.class_,
                     color: AppColors.primary, size: 20),
               ),
               const SizedBox(width: 12),
@@ -353,14 +383,9 @@ class _ClassCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      assignment.className,
+                      '${assignment.subjectName}/${assignment.className}',
                       style: const TextStyle(
                           fontWeight: FontWeight.w600, fontSize: 15),
-                    ),
-                    Text(
-                      '$subjectCount ${subjectCount == 1 ? 'subject' : 'subjects'}',
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 12),
                     ),
                   ],
                 ),

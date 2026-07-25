@@ -9,12 +9,15 @@ import '../../core/widgets/loading_widget.dart';
 import '../../core/widgets/empty_widget.dart';
 import '../../core/widgets/app_card.dart';
 import '../../models/result_model.dart';
+import '../../models/teacher_model.dart';
 import '../students/students_provider.dart';
 import '../dashboard/parent_dashboard_page.dart';
 import 'results_provider.dart';
+
 class ResultsPage extends ConsumerWidget {
   final bool isParent;
   const ResultsPage({super.key, this.isParent = false});
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,8 +41,22 @@ class _TeacherResultsViewState extends ConsumerState<_TeacherResultsView> {
   Widget build(BuildContext context) {
     final assignmentsAsync = ref.watch(teacherAssignmentsProvider);
 
+    Future<void> refresh() async {
+      ref.invalidate(teacherAssignmentsProvider);
+      await ref.read(teacherAssignmentsProvider.future).catchError((_) => <TeacherAssignment>[]);
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Results')),
+      appBar: AppBar(
+        title: const Text('Results'),
+        actions: [
+          IconButton(
+            onPressed: refresh,
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
       body: assignmentsAsync.when(
         data: (assignments) {
           if (assignments.isEmpty) {
@@ -88,34 +105,20 @@ class _TeacherResultsViewState extends ConsumerState<_TeacherResultsView> {
                                   ]
                                 : [],
                           ),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  a.subjectName,
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : AppColors.textSecondary,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.normal,
-                                    fontSize: 12,
-                                  ),
+                            child: Center(
+                              child: Text(
+                                '${a.subjectName}/${a.className}',
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : AppColors.textSecondary,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.normal,
+                                  fontSize: 13,
                                 ),
-                                Text(
-                                  a.className,
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white70
-                                        : AppColors.textHint,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
                         ),
                       );
                     },

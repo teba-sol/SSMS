@@ -65,16 +65,20 @@ class TeacherAssignment extends Equatable {
   });
 
   String get className {
-    if (classData == null) return 'Unknown Class';
-    // Prefer the explicit name field, fall back to grade+section
-    final name = classData!['name'] as String?;
-    if (name != null && name.isNotEmpty) return name;
+    if (classData == null) return 'Class';
+    // Always build from grade_level + section for consistent display (e.g. "Grade 10 Section B")
     final grade = classData!['grade_level'];
     final section = classData!['section'] as String?;
     if (grade != null) {
-      return 'Grade $grade${section != null && section.isNotEmpty ? ' $section' : ''}';
+      final gradeStr = 'Grade $grade';
+      return section != null && section.isNotEmpty
+          ? '$gradeStr Section $section'
+          : gradeStr;
     }
-    return 'Unknown Class';
+    // Fallback to name field if no grade_level
+    final name = classData!['name'] as String?;
+    if (name != null && name.isNotEmpty) return name;
+    return 'Class';
   }
 
   String get subjectName {

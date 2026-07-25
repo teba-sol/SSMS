@@ -77,10 +77,7 @@ CREATE POLICY "classes_teacher_select"
     USING (
         public.get_user_role() = 'teacher'
         AND is_active = true
-        AND id IN (
-            SELECT ta.class_id FROM public.teacher_assignments ta
-            WHERE ta.teacher_id = public.get_teacher_id()
-        )
+        AND id IN (SELECT public.get_teacher_class_ids())
     );
 
 -- =============================================================================
@@ -141,11 +138,7 @@ CREATE POLICY "students_teacher_select"
     TO authenticated
     USING (
         public.get_user_role() = 'teacher'
-        AND id IN (
-            SELECT se.student_id FROM public.student_enrollments se
-            JOIN public.teacher_assignments ta ON ta.class_id = se.class_id
-            WHERE ta.teacher_id = public.get_teacher_id()
-        )
+        AND id IN (SELECT public.get_teacher_student_ids())
     );
 
 -- Parents: read their children
@@ -154,11 +147,7 @@ CREATE POLICY "students_parent_select"
     TO authenticated
     USING (
         public.get_user_role() = 'parent'
-        AND id IN (
-            SELECT ps.student_id FROM public.parent_students ps
-            WHERE ps.parent_id = auth.uid()
-              AND ps.is_active = true
-        )
+        AND id IN (SELECT public.get_parent_student_ids())
     );
 
 -- =============================================================================
@@ -206,10 +195,7 @@ CREATE POLICY "student_enrollments_teacher_select"
     TO authenticated
     USING (
         public.get_user_role() = 'teacher'
-        AND class_id IN (
-            SELECT ta.class_id FROM public.teacher_assignments ta
-            WHERE ta.teacher_id = public.get_teacher_id()
-        )
+        AND class_id IN (SELECT public.get_teacher_class_ids())
     );
 
 -- Parents: read their children's enrollments
@@ -218,11 +204,7 @@ CREATE POLICY "student_enrollments_parent_select"
     TO authenticated
     USING (
         public.get_user_role() = 'parent'
-        AND student_id IN (
-            SELECT ps.student_id FROM public.parent_students ps
-            WHERE ps.parent_id = auth.uid()
-              AND ps.is_active = true
-        )
+        AND student_id IN (SELECT public.get_parent_student_ids())
     );
 
 -- =============================================================================
@@ -264,10 +246,7 @@ CREATE POLICY "attendance_teacher_select"
     TO authenticated
     USING (
         public.get_user_role() = 'teacher'
-        AND class_id IN (
-            SELECT ta.class_id FROM public.teacher_assignments ta
-            WHERE ta.teacher_id = public.get_teacher_id()
-        )
+        AND class_id IN (SELECT public.get_teacher_class_ids())
     );
 
 -- Teachers: insert/update attendance for their assigned classes
@@ -277,10 +256,7 @@ CREATE POLICY "attendance_teacher_insert"
     WITH CHECK (
         public.get_user_role() = 'teacher'
         AND marked_by = public.get_teacher_id()
-        AND class_id IN (
-            SELECT ta.class_id FROM public.teacher_assignments ta
-            WHERE ta.teacher_id = public.get_teacher_id()
-        )
+        AND class_id IN (SELECT public.get_teacher_class_ids())
     );
 
 CREATE POLICY "attendance_teacher_update"
@@ -289,10 +265,7 @@ CREATE POLICY "attendance_teacher_update"
     USING (
         public.get_user_role() = 'teacher'
         AND marked_by = public.get_teacher_id()
-        AND class_id IN (
-            SELECT ta.class_id FROM public.teacher_assignments ta
-            WHERE ta.teacher_id = public.get_teacher_id()
-        )
+        AND class_id IN (SELECT public.get_teacher_class_ids())
     )
     WITH CHECK (
         public.get_user_role() = 'teacher'
@@ -305,11 +278,7 @@ CREATE POLICY "attendance_parent_select"
     TO authenticated
     USING (
         public.get_user_role() = 'parent'
-        AND student_id IN (
-            SELECT ps.student_id FROM public.parent_students ps
-            WHERE ps.parent_id = auth.uid()
-              AND ps.is_active = true
-        )
+        AND student_id IN (SELECT public.get_parent_student_ids())
     );
 
 -- =============================================================================
@@ -369,11 +338,7 @@ CREATE POLICY "results_parent_select"
     TO authenticated
     USING (
         public.get_user_role() = 'parent'
-        AND student_id IN (
-            SELECT ps.student_id FROM public.parent_students ps
-            WHERE ps.parent_id = auth.uid()
-              AND ps.is_active = true
-        )
+        AND student_id IN (SELECT public.get_parent_student_ids())
     );
 
 -- =============================================================================
@@ -390,17 +355,9 @@ CREATE POLICY "activities_select_authenticated"
         -- School-wide activities visible to all
         class_id IS NULL
         -- Class-specific: visible to teachers assigned to that class
-        OR class_id IN (
-            SELECT ta.class_id FROM public.teacher_assignments ta
-            WHERE ta.teacher_id = public.get_teacher_id()
-        )
+        OR class_id IN (SELECT public.get_teacher_class_ids())
         -- Class-specific: visible to parents of students in that class
-        OR class_id IN (
-            SELECT se.class_id FROM public.student_enrollments se
-            JOIN public.parent_students ps ON ps.student_id = se.student_id
-            WHERE ps.parent_id = auth.uid()
-              AND ps.is_active = true
-        )
+        OR class_id IN (SELECT public.get_parent_class_ids())
         -- Admin sees all
         OR public.get_user_role() = 'administrator'
     );
@@ -438,15 +395,8 @@ CREATE POLICY "announcements_select_published"
         -- Class-specific announcements
         AND (
             class_id IS NULL
-            OR class_id IN (
-                SELECT se.class_id FROM public.student_enrollments se
-                JOIN public.parent_students ps ON ps.student_id = se.student_id
-                WHERE ps.parent_id = auth.uid() AND ps.is_active = true
-            )
-            OR class_id IN (
-                SELECT ta.class_id FROM public.teacher_assignments ta
-                WHERE ta.teacher_id = public.get_teacher_id()
-            )
+            OR class_id IN (SELECT public.get_parent_class_ids())
+            OR class_id IN (SELECT public.get_teacher_class_ids())
         )
     );
 

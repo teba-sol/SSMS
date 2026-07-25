@@ -122,14 +122,14 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
                         if (isStudentLog) ...[
                           Text(
                             widget.studentName ?? 'Student',
-                            style: TextStyle(
+                            style: const TextStyle(
                                 color: AppColors.warning,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13),
                           ),
                           Text(
                             'This log will be sent to parent(s)',
-                            style: TextStyle(
+                            style: const TextStyle(
                                 color: AppColors.warning,
                                 fontSize: 11),
                           ),

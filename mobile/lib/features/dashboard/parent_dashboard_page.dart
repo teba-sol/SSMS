@@ -17,46 +17,67 @@ import '../../models/parent_model.dart';
 // State for selected child index
 final selectedChildIndexProvider = StateProvider<int>((ref) => 0);
 
-class ParentDashboardPage extends ConsumerWidget {
+class ParentDashboardPage extends ConsumerStatefulWidget {
   const ParentDashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ParentDashboardPage> createState() =>
+      _ParentDashboardPageState();
+}
+
+class _ParentDashboardPageState extends ConsumerState<ParentDashboardPage> {
+  Future<void> _refresh() async {
+    ref.invalidate(currentProfileProvider);
+    ref.invalidate(parentChildrenProvider);
+    ref.invalidate(notificationsProvider);
+    // Also refresh announcements to update the badge
+    await Future.delayed(const Duration(milliseconds: 300));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profile = ref.watch(currentProfileProvider);
     final childrenAsync = ref.watch(parentChildrenProvider);
     final unreadNotif = ref.watch(unreadNotificationsCountProvider);
     final selectedIndex = ref.watch(selectedChildIndexProvider);
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // Header
-          SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: AppColors.parentGradient,
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: CustomScrollView(
+          slivers: [
+            // ── Header ──────────────────────────────────────────
+            SliverAppBar(
+              expandedHeight: 200,
+              pinned: true,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.parentGradient,
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
+                              // Avatar + greeting
                               Row(
                                 children: [
                                   CircleAvatar(
                                     radius: 22,
-                                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.2),
                                     child: Text(
-                                      profile?.firstName.substring(0, 1).toUpperCase() ?? 'P',
+                                      profile?.firstName
+                                              .substring(0, 1)
+                                              .toUpperCase() ??
+                                          'P',
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w700,
@@ -66,7 +87,8 @@ class ParentDashboardPage extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: 12),
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Hello, ${profile?.firstName ?? 'Parent'}',
@@ -77,44 +99,77 @@ class ParentDashboardPage extends ConsumerWidget {
                                         ),
                                       ),
                                       Text(
-                                        DateFormat('EEE, MMM d').format(DateTime.now()),
-                                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                        DateFormat('EEE, MMM d')
+                                            .format(DateTime.now()),
+                                        style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12),
                                       ),
                                     ],
                                   ),
                                 ],
                               ),
-                              Stack(
+                              // Action buttons
+                              Row(
                                 children: [
-                                  IconButton(
-                                    onPressed: () => context.go(RouteNames.parentNotifications),
-                                    icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-                                  ),
-                                  if (unreadNotif > 0)
-                                    Positioned(
-                                      right: 8,
-                                      top: 8,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(2),
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.error,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Text(
-                                          '$unreadNotif',
-                                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
-                                        ),
+                                  // Notifications
+                                  Stack(
+                                    children: [
+                                      IconButton(
+                                        onPressed: () => context
+                                            .push(RouteNames.parentNotifications),
+                                        icon: const Icon(
+                                            Icons.notifications_outlined,
+                                            color: Colors.white),
                                       ),
-                                    ),
+                                      if (unreadNotif > 0)
+                                        Positioned(
+                                          right: 8,
+                                          top: 8,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(2),
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.error,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Text(
+                                              unreadNotif > 9
+                                                  ? '9+'
+                                                  : '$unreadNotif',
+                                              style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w700),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  // Refresh
+                                  IconButton(
+                                    onPressed: _refresh,
+                                    icon: const Icon(Icons.refresh_rounded,
+                                        color: Colors.white),
+                                    tooltip: 'Refresh',
+                                  ),
+                                  // Settings
+                                  IconButton(
+                                    onPressed: () =>
+                                        context.push(RouteNames.settings),
+                                    icon: const Icon(Icons.settings_outlined,
+                                        color: Colors.white),
+                                  ),
                                 ],
                               ),
                             ],
                           ),
                           const SizedBox(height: 16),
-                          // Child switcher
+                          // Child switcher chips
                           childrenAsync.when(
                             data: (children) {
-                              if (children.isEmpty) return const SizedBox.shrink();
+                              if (children.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
                               return SizedBox(
                                 height: 44,
                                 child: ListView.builder(
@@ -124,19 +179,32 @@ class ParentDashboardPage extends ConsumerWidget {
                                     final child = children[i];
                                     final isSelected = i == selectedIndex;
                                     return GestureDetector(
-                                      onTap: () => ref.read(selectedChildIndexProvider.notifier).state = i,
+                                      onTap: () => ref
+                                          .read(selectedChildIndexProvider
+                                              .notifier)
+                                          .state = i,
                                       child: AnimatedContainer(
-                                        duration: const Duration(milliseconds: 200),
-                                        margin: const EdgeInsets.only(right: 8),
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                        margin:
+                                            const EdgeInsets.only(right: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 8),
                                         decoration: BoxDecoration(
-                                          color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.2),
-                                          borderRadius: BorderRadius.circular(22),
+                                          color: isSelected
+                                              ? Colors.white
+                                              : Colors.white
+                                                  .withValues(alpha: 0.2),
+                                          borderRadius:
+                                              BorderRadius.circular(22),
                                         ),
                                         child: Text(
-                                          child.student?.firstName ?? 'Child ${i + 1}',
+                                          child.student?.firstName ??
+                                              'Child ${i + 1}',
                                           style: TextStyle(
-                                            color: isSelected ? AppColors.secondary : Colors.white,
+                                            color: isSelected
+                                                ? AppColors.secondary
+                                                : Colors.white,
                                             fontWeight: FontWeight.w600,
                                             fontSize: 13,
                                           ),
@@ -152,43 +220,60 @@ class ParentDashboardPage extends ConsumerWidget {
                           ),
                         ],
                       ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
-          SliverToBoxAdapter(
-            child: childrenAsync.when(
-              data: (children) {
-                if (children.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(
-                      child: Text(
-                        'No students linked to your account.\nPlease contact the school administrator.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textSecondary),
+            SliverToBoxAdapter(
+              child: childrenAsync.when(
+                data: (children) {
+                  if (children.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(40),
+                      child: Center(
+                        child: Text(
+                          'No students linked to your account.\nPlease contact the school administrator.',
+                          textAlign: TextAlign.center,
+                          style:
+                              TextStyle(color: AppColors.textSecondary),
+                        ),
                       ),
-                    ),
-                  );
-                }
-                final selectedChild = children.length > selectedIndex
-                    ? children[selectedIndex]
-                    : children.first;
-                return _ChildDashboard(child: selectedChild);
-              },
-              loading: () => const Padding(
-                padding: EdgeInsets.all(20),
-                child: ShimmerList(count: 4, itemHeight: 80),
-              ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text('Error: $e'),
+                    );
+                  }
+                  final selectedChild = children.length > selectedIndex
+                      ? children[selectedIndex]
+                      : children.first;
+                  return _ChildDashboard(child: selectedChild);
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: ShimmerList(count: 4, itemHeight: 80),
+                ),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.error_outline,
+                          color: AppColors.error, size: 40),
+                      const SizedBox(height: 8),
+                      Text('Error: $e',
+                          style:
+                              const TextStyle(color: AppColors.textSecondary)),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: _refresh,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -220,7 +305,9 @@ class _ChildDashboard extends ConsumerWidget {
             data: (summary) {
               final total = summary.values.fold(0, (a, b) => a + b);
               final present = summary['present'] ?? 0;
-              final rate = total > 0 ? (present / total * 100).toStringAsFixed(0) : '0';
+              final rate = total > 0
+                  ? (present / total * 100).toStringAsFixed(0)
+                  : '0';
               return GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
@@ -246,12 +333,15 @@ class _ChildDashboard extends ConsumerWidget {
                   ),
                   resultsAsync.when(
                     data: (results) {
-                      final avg = results.isNotEmpty && results.any((r) => r.percentage != null)
+                      final avg = results.isNotEmpty &&
+                              results.any((r) => r.percentage != null)
                           ? (results
                                   .where((r) => r.percentage != null)
                                   .map((r) => r.percentage!)
                                   .reduce((a, b) => a + b) /
-                              results.where((r) => r.percentage != null).length)
+                              results
+                                  .where((r) => r.percentage != null)
+                                  .length)
                           : 0.0;
                       return StatCard(
                         title: 'Avg. Score',
@@ -261,13 +351,13 @@ class _ChildDashboard extends ConsumerWidget {
                         onTap: () => context.go(RouteNames.parentResults),
                       );
                     },
-                    loading: () => StatCard(
+                    loading: () => const StatCard(
                       title: 'Avg. Score',
                       value: '—',
                       icon: Icons.school_rounded,
                       color: AppColors.secondary,
                     ),
-                    error: (_, __) => StatCard(
+                    error: (_, __) => const StatCard(
                       title: 'Avg. Score',
                       value: '—',
                       icon: Icons.school_rounded,
@@ -300,7 +390,8 @@ class _ChildDashboard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Recent Attendance',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               TextButton(
                 onPressed: () => context.go(RouteNames.parentAttendance),
                 child: const Text('View All'),
@@ -317,14 +408,27 @@ class _ChildDashboard extends ConsumerWidget {
               return Column(
                 children: records.take(5).map((a) {
                   final (color, bg) = switch (a.status.value) {
-                    'present' => (AppColors.attendancePresent, AppColors.attendancePresentLight),
-                    'absent' => (AppColors.attendanceAbsent, AppColors.attendanceAbsentLight),
-                    'late' => (AppColors.attendanceLate, AppColors.attendanceLateLight),
-                    _ => (AppColors.attendanceExcused, AppColors.attendanceExcusedLight),
+                    'present' => (
+                        AppColors.attendancePresent,
+                        AppColors.attendancePresentLight
+                      ),
+                    'absent' => (
+                        AppColors.attendanceAbsent,
+                        AppColors.attendanceAbsentLight
+                      ),
+                    'late' => (
+                        AppColors.attendanceLate,
+                        AppColors.attendanceLateLight
+                      ),
+                    _ => (
+                        AppColors.attendanceExcused,
+                        AppColors.attendanceExcusedLight
+                      ),
                   };
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: bg,
                       borderRadius: BorderRadius.circular(12),
@@ -335,7 +439,8 @@ class _ChildDashboard extends ConsumerWidget {
                         const SizedBox(width: 10),
                         Text(
                           DateFormat('EEE, MMM d').format(a.date),
-                          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w500, fontSize: 13),
                         ),
                         const Spacer(),
                         Text(
@@ -413,7 +518,8 @@ class _StudentInfoCard extends StatelessWidget {
                 ),
                 Text(
                   child.relationship.label,
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style:
+                      const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],
             ),
@@ -431,18 +537,38 @@ class _ParentQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      (Icons.bar_chart_rounded, 'Results', AppColors.secondary,
-          const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)]),
-          RouteNames.parentResults),
-      (Icons.calendar_month_rounded, 'Attendance', AppColors.primary,
-          const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)]),
-          RouteNames.parentAttendance),
-      (Icons.chat_bubble_rounded, 'Message\nTeacher', AppColors.success,
-          const LinearGradient(colors: [Color(0xFF16A34A), Color(0xFF15803D)]),
-          RouteNames.parentMessages),
-      (Icons.support_agent_rounded, 'Contact\nAdmin', AppColors.warning,
-          const LinearGradient(colors: [Color(0xFFEA580C), Color(0xFFDC2626)]),
-          RouteNames.parentMessages),
+      (
+        Icons.bar_chart_rounded,
+        'Results',
+        AppColors.secondary,
+        const LinearGradient(
+            colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)]),
+        RouteNames.parentResults
+      ),
+      (
+        Icons.calendar_month_rounded,
+        'Attendance',
+        AppColors.primary,
+        const LinearGradient(
+            colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)]),
+        RouteNames.parentAttendance
+      ),
+      (
+        Icons.chat_bubble_rounded,
+        'Message\nTeacher',
+        AppColors.success,
+        const LinearGradient(
+            colors: [Color(0xFF16A34A), Color(0xFF15803D)]),
+        RouteNames.parentMessages
+      ),
+      (
+        Icons.campaign_rounded,
+        'Announce\nments',
+        AppColors.warning,
+        const LinearGradient(
+            colors: [Color(0xFFEA580C), Color(0xFFDC2626)]),
+        RouteNames.parentAnnouncements
+      ),
     ];
     return Row(
       children: actions.map((a) {

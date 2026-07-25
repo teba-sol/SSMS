@@ -19,16 +19,25 @@ class AnnouncementsPage extends ConsumerWidget {
     final announcementsState = ref.watch(announcementsProvider);
     final profile = ref.watch(currentProfileProvider);
 
+    final fallback = profile?.role.name == 'parent'
+        ? RouteNames.parentDashboard
+        : RouteNames.teacherDashboard;
+
+    Future<void> refresh() => ref.read(announcementsProvider.notifier).refresh();
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.canPop()
-              ? context.pop()
-              : context.go(RouteNames.teacherDashboard),
+          onPressed: () => context.canPop() ? context.pop() : context.go(fallback),
         ),
         title: const Text('Announcements'),
         actions: [
+          IconButton(
+            onPressed: refresh,
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh',
+          ),
           if (profile?.role.name == 'teacher')
             IconButton(
               onPressed: () => context.push(RouteNames.teacherAnnouncementAdd),
@@ -37,27 +46,27 @@ class AnnouncementsPage extends ConsumerWidget {
             ),
         ],
       ),
-      body: announcementsState.when(
-        data: (announcements) {
-          if (announcements.isEmpty) {
-            return const EmptyWidget(
-              title: 'No Announcements',
-              subtitle: 'School announcements will appear here.',
-              icon: Icons.campaign_outlined,
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () => ref.read(announcementsProvider.notifier).refresh(),
-            child: ListView.builder(
+      body: RefreshIndicator(
+        onRefresh: refresh,
+        child: announcementsState.when(
+          data: (announcements) {
+            if (announcements.isEmpty) {
+              return const EmptyWidget(
+                title: 'No Announcements',
+                subtitle: 'School announcements will appear here.',
+                icon: Icons.campaign_outlined,
+              );
+            }
+            return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: announcements.length,
               itemBuilder: (ctx, i) =>
                   _AnnouncementCard(announcement: announcements[i]),
-            ),
-          );
-        },
-        loading: () => const ShimmerList(count: 4, itemHeight: 140),
-        error: (e, _) => Center(child: Text('Error: $e')),
+            );
+          },
+          loading: () => const ShimmerList(count: 4, itemHeight: 140),
+          error: (e, _) => Center(child: Text('Error: $e')),
+        ),
       ),
     );
   }

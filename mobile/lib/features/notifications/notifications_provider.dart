@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/notification_model.dart';
+import '../announcements/announcements_provider.dart';
 import 'notifications_service.dart';
 
 final notificationsServiceProvider =
@@ -14,9 +15,13 @@ final notificationsStreamProvider =
       );
 });
 
+/// Combined unread count: DB notifications + unread announcements + unread messages
 final unreadNotificationsCountProvider = Provider<int>((ref) {
-  final stream = ref.watch(notificationsStreamProvider);
-  return stream.value?.where((n) => !n.isRead).length ?? 0;
+  final notifStream = ref.watch(notificationsStreamProvider);
+  final announcState = ref.watch(announcementsProvider);
+  final notifCount = notifStream.value?.where((n) => !n.isRead).length ?? 0;
+  final announcCount = announcState.value?.where((a) => !a.isRead).length ?? 0;
+  return notifCount + announcCount;
 });
 
 class NotificationsNotifier

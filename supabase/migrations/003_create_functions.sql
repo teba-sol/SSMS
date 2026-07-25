@@ -412,3 +412,33 @@ COMMENT ON FUNCTION public.create_notification(UUID, TEXT, TEXT, TEXT, TEXT, UUI
 -- DONE: Functions and triggers created.
 -- Next: Migration 004 for RLS policies.
 -- =============================================================================
+
+-- =============================================================================
+-- 17. RLS HELPER FUNCTIONS (Bypass Recursion)
+-- =============================================================================
+CREATE OR REPLACE FUNCTION public.get_teacher_class_ids()
+RETURNS SETOF UUID AS $$
+    SELECT class_id FROM public.teacher_assignments
+    WHERE teacher_id = public.get_teacher_id();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION public.get_parent_student_ids()
+RETURNS SETOF UUID AS $$
+    SELECT student_id FROM public.parent_students
+    WHERE parent_id = auth.uid() AND is_active = true;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION public.get_teacher_student_ids()
+RETURNS SETOF UUID AS $$
+    SELECT se.student_id FROM public.student_enrollments se
+    JOIN public.teacher_assignments ta ON ta.class_id = se.class_id
+    WHERE ta.teacher_id = public.get_teacher_id();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION public.get_parent_class_ids()
+RETURNS SETOF UUID AS $$
+    SELECT se.class_id FROM public.student_enrollments se
+    JOIN public.parent_students ps ON ps.student_id = se.student_id
+    WHERE ps.parent_id = auth.uid() AND ps.is_active = true;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+

@@ -40,7 +40,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: AppColors.successLight,
                             shape: BoxShape.circle,
                           ),
@@ -73,7 +73,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppColors.primaryLight,
                               shape: BoxShape.circle,
                             ),

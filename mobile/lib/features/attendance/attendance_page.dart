@@ -9,6 +9,7 @@ import '../../core/widgets/loading_widget.dart';
 import '../../core/widgets/empty_widget.dart';
 import '../../core/widgets/app_card.dart';
 import '../../models/attendance_model.dart';
+import '../../models/teacher_model.dart';
 import '../students/students_provider.dart';
 import '../dashboard/parent_dashboard_page.dart';
 import 'attendance_provider.dart';
@@ -31,44 +32,77 @@ class _TeacherAttendanceView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final assignmentsAsync = ref.watch(teacherAssignmentsProvider);
 
+    Future<void> refresh() async {
+      ref.invalidate(teacherAssignmentsProvider);
+      await ref.read(teacherAssignmentsProvider.future).catchError((_) => <TeacherAssignment>[]);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Attendance'),
         actions: [
+          IconButton(
+            onPressed: refresh,
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh',
+          ),
           IconButton(
             onPressed: () => context.push(RouteNames.teacherNotifications),
             icon: const Icon(Icons.notifications_outlined),
           ),
         ],
       ),
-      body: assignmentsAsync.when(
-        data: (assignments) {
-          if (assignments.isEmpty) {
-            return const EmptyWidget(
-              title: 'No Classes Assigned',
-              subtitle: 'You have no classes assigned for this academic year.',
-              icon: Icons.class_,
+      body: RefreshIndicator(
+        onRefresh: refresh,
+        child: assignmentsAsync.when(
+          data: (assignments) {
+            if (assignments.isEmpty) {
+              return const EmptyWidget(
+                title: 'No Classes Assigned',
+                subtitle: 'You have no classes assigned for this academic year.',
+                icon: Icons.class_,
+              );
+            }
+            // Group by classId
+            final seen = <String>{};
+            final uniqueByClass = assignments
+                .where((a) => seen.add(a.classId))
+                .toList();
+            return ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                const Text(
+                  'Select a class to mark or view attendance',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                ...uniqueByClass.map((a) => _AttendanceClassCard(assignment: a)),
+              ],
             );
-          }
-          // Group by classId
-          final seen = <String>{};
-          final uniqueByClass = assignments
-              .where((a) => seen.add(a.classId))
-              .toList();
-          return ListView(
-            padding: const EdgeInsets.all(20),
+          },
+          loading: () => const ShimmerList(count: 3),
+          error: (e, _) => ListView(
             children: [
-              const Text(
-                'Select a class to mark or view attendance',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 60),
+                    const Icon(Icons.error_outline, color: AppColors.error, size: 40),
+                    const SizedBox(height: 8),
+                    Text('Error: $e', style: const TextStyle(color: AppColors.textSecondary)),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: refresh,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              ...uniqueByClass.map((a) => _AttendanceClassCard(assignment: a)),
             ],
-          );
-        },
-        loading: () => const ShimmerList(count: 3),
-        error: (e, _) => Center(child: Text('Error: $e')),
+          ),
+        ),
       ),
     );
   }
@@ -426,10 +460,10 @@ class _AttendanceCalendarView extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _LegendItem('Present', AppColors.attendancePresent),
-                    _LegendItem('Absent', AppColors.attendanceAbsent),
-                    _LegendItem('Late', AppColors.attendanceLate),
-                    _LegendItem('Excused', AppColors.attendanceExcused),
+                    const _LegendItem('Present', AppColors.attendancePresent),
+                    const _LegendItem('Absent', AppColors.attendanceAbsent),
+                    const _LegendItem('Late', AppColors.attendanceLate),
+                    const _LegendItem('Excused', AppColors.attendanceExcused),
                   ],
                 ),
               ),

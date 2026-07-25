@@ -23,11 +23,13 @@ final teacherAssignmentsProvider =
       .getTeacherAssignments(teacherAsync.id);
 });
 
-/// Students in a specific class
+/// Students in a specific class — uses RPC to avoid parent_students RLS recursion
 final classStudentsListProvider =
     FutureProvider.family<List<Student>, String>((ref, classId) async {
   return ref.read(studentsServiceProvider).getStudentsInClass(classId);
 });
+
+
 
 /// Parents linked to a specific student (for teacher messaging)
 final parentsForStudentProvider =

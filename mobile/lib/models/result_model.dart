@@ -87,7 +87,18 @@ class Result extends Equatable {
   String get className {
     final classes = assignmentData?['classes'];
     if (classes == null) return '';
-    return 'Grade ${classes['grade_level']} ${classes['section'] ?? ''}';
+    // Always build from grade_level + section for consistent display
+    final grade = classes['grade_level'];
+    final section = classes['section'] as String?;
+    if (grade != null) {
+      return section != null && section.isNotEmpty
+          ? 'Grade $grade Section $section'
+          : 'Grade $grade';
+    }
+    // Fallback to name field
+    final name = classes['name'] as String?;
+    if (name != null && name.isNotEmpty) return name;
+    return '';
   }
 
   double? get percentage {

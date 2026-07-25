@@ -233,13 +233,25 @@ class _AllStudents extends ConsumerWidget {
           title: 'No Students', icon: Icons.people_outline_rounded);
     }
 
-    // Watch all classes and merge
+    // Watch all class student lists and merge them
     final allStudentsAsync = classes.map((c) {
       return ref.watch(classStudentsListProvider(c.classId as String));
     }).toList();
 
     final isLoading = allStudentsAsync.any((a) => a.isLoading);
     if (isLoading) return const ShimmerList(count: 5);
+
+    final hasError = allStudentsAsync.any((a) => a.hasError);
+    if (hasError) {
+      final err = allStudentsAsync.firstWhere((a) => a.hasError).error;
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Error loading students: $err',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      );
+    }
 
     final allStudents = <Student>[];
     final seen = <String>{};
@@ -395,7 +407,7 @@ class _StudentCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios_rounded,
+                  const Icon(Icons.arrow_forward_ios_rounded,
                       size: 14, color: AppColors.textHint),
                 ],
               ),
