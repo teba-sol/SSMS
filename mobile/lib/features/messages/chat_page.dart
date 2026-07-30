@@ -40,9 +40,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   @override
   void initState() {
     super.initState();
-    // Mark messages as read
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(messagesServiceProvider).markMessagesRead(widget.conversationId);
+      ref
+          .read(conversationsProvider.notifier)
+          .markConversationRead(widget.conversationId);
     });
   }
 
@@ -120,8 +121,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 if (hasUnreadMessages) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     ref
-                        .read(messagesServiceProvider)
-                        .markMessagesRead(widget.conversationId);
+                        .read(conversationsProvider.notifier)
+                        .markConversationRead(widget.conversationId);
                   });
                 }
 

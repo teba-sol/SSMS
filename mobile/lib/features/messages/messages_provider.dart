@@ -29,6 +29,11 @@ class ConversationsNotifier extends Notifier<AsyncValue<List<Conversation>>> {
 
   Future<void> refresh() => _load();
 
+  Future<void> markConversationRead(String conversationId) async {
+    await ref.read(messagesServiceProvider).markMessagesRead(conversationId);
+    await _load();
+  }
+
   Future<Conversation?> getOrCreate(String otherUserId) async {
     try {
       final conv = await ref

@@ -27,6 +27,10 @@ class NotificationService {
     );
 
     await _localNotifications.initialize(settings);
+
+    final android = _localNotifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await android?.requestNotificationsPermission();
   }
 
   Future<void> showLocalNotification({
@@ -79,13 +83,10 @@ class NotificationService {
 
   /// Deactivate device token on logout
   Future<void> deactivateToken(String token) async {
-    await AppSupabase.client
-        .from(AppTables.deviceTokens)
-        .update({
-          'is_active': false,
-          'logged_out_at': DateTime.now().toIso8601String(),
-        })
-        .eq('token', token);
+    await AppSupabase.client.from(AppTables.deviceTokens).update({
+      'is_active': false,
+      'logged_out_at': DateTime.now().toIso8601String(),
+    }).eq('token', token);
   }
 
   /// Listen for new notifications in real-time

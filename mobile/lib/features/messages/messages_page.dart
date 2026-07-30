@@ -78,17 +78,24 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                 lastMessage: conv.lastMessageContent ?? '',
                 lastTime: conv.lastMessageAt,
                 unread: conv.unreadCount,
-                onTap: () => context.push(
-                  widget.isParent
-                      ? RouteNames.parentChat
-                      : RouteNames.teacherChat,
-                  extra: {
-                    'conversationId': conv.id,
-                    'otherUserId': conv.otherParticipantId(currentUserId),
-                    'otherUserName': other?.fullName ?? 'Chat',
-                    'otherUserRole': other?.role.name ?? '',
-                  },
-                ),
+                onTap: () async {
+                  await ref
+                      .read(conversationsProvider.notifier)
+                      .markConversationRead(conv.id);
+                  if (!context.mounted) return;
+
+                  context.push(
+                    widget.isParent
+                        ? RouteNames.parentChat
+                        : RouteNames.teacherChat,
+                    extra: {
+                      'conversationId': conv.id,
+                      'otherUserId': conv.otherParticipantId(currentUserId),
+                      'otherUserName': other?.fullName ?? 'Chat',
+                      'otherUserRole': other?.role.name ?? '',
+                    },
+                  );
+                },
               );
             },
           );

@@ -116,8 +116,8 @@ class _ParentDashboardPageState extends ConsumerState<ParentDashboardPage> {
                                   Stack(
                                     children: [
                                       IconButton(
-                                        onPressed: () => context
-                                            .push(RouteNames.parentNotifications),
+                                        onPressed: () => context.push(
+                                            RouteNames.parentNotifications),
                                         icon: const Icon(
                                             Icons.notifications_outlined,
                                             color: Colors.white),
@@ -186,8 +186,7 @@ class _ParentDashboardPageState extends ConsumerState<ParentDashboardPage> {
                                       child: AnimatedContainer(
                                         duration:
                                             const Duration(milliseconds: 200),
-                                        margin:
-                                            const EdgeInsets.only(right: 8),
+                                        margin: const EdgeInsets.only(right: 8),
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 16, vertical: 8),
                                         decoration: BoxDecoration(
@@ -236,8 +235,7 @@ class _ParentDashboardPageState extends ConsumerState<ParentDashboardPage> {
                         child: Text(
                           'No students linked to your account.\nPlease contact the school administrator.',
                           textAlign: TextAlign.center,
-                          style:
-                              TextStyle(color: AppColors.textSecondary),
+                          style: TextStyle(color: AppColors.textSecondary),
                         ),
                       ),
                     );
@@ -305,9 +303,8 @@ class _ChildDashboard extends ConsumerWidget {
             data: (summary) {
               final total = summary.values.fold(0, (a, b) => a + b);
               final present = summary['present'] ?? 0;
-              final rate = total > 0
-                  ? (present / total * 100).toStringAsFixed(0)
-                  : '0';
+              final rate =
+                  total > 0 ? (present / total * 100).toStringAsFixed(0) : '0';
               return GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
@@ -339,9 +336,7 @@ class _ChildDashboard extends ConsumerWidget {
                                   .where((r) => r.percentage != null)
                                   .map((r) => r.percentage!)
                                   .reduce((a, b) => a + b) /
-                              results
-                                  .where((r) => r.percentage != null)
-                                  .length)
+                              results.where((r) => r.percentage != null).length)
                           : 0.0;
                       return StatCard(
                         title: 'Avg. Score',
@@ -390,8 +385,7 @@ class _ChildDashboard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Recent Attendance',
-                  style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               TextButton(
                 onPressed: () => context.go(RouteNames.parentAttendance),
                 child: const Text('View All'),
@@ -518,8 +512,7 @@ class _StudentInfoCard extends StatelessWidget {
                 ),
                 Text(
                   child.relationship.label,
-                  style:
-                      const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],
             ),
@@ -541,33 +534,29 @@ class _ParentQuickActions extends StatelessWidget {
         Icons.bar_chart_rounded,
         'Results',
         AppColors.secondary,
-        const LinearGradient(
-            colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)]),
+        const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)]),
         RouteNames.parentResults
       ),
       (
         Icons.calendar_month_rounded,
         'Attendance',
         AppColors.primary,
-        const LinearGradient(
-            colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)]),
+        const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)]),
         RouteNames.parentAttendance
       ),
       (
         Icons.chat_bubble_rounded,
         'Message\nTeacher',
         AppColors.success,
-        const LinearGradient(
-            colors: [Color(0xFF16A34A), Color(0xFF15803D)]),
+        const LinearGradient(colors: [Color(0xFF16A34A), Color(0xFF15803D)]),
         RouteNames.parentMessages
       ),
       (
-        Icons.campaign_rounded,
-        'Announce\nments',
-        AppColors.warning,
-        const LinearGradient(
-            colors: [Color(0xFFEA580C), Color(0xFFDC2626)]),
-        RouteNames.parentAnnouncements
+        Icons.article_outlined,
+        'Activity\nLogs',
+        AppColors.success,
+        const LinearGradient(colors: [Color(0xFF16A34A), Color(0xFF15803D)]),
+        RouteNames.parentActivities
       ),
     ];
     return Row(
