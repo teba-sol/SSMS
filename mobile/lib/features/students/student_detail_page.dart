@@ -920,8 +920,7 @@ class _ResultsTab extends ConsumerWidget {
 }
 
 // ─── STUDENT LOG TAB ────────────────────────────────────────────────────────
-// Shows behavior/participation logs for this specific student.
-// Teacher can add a new log; it auto-notifies the parent.
+// Shows personal logs for the selected student.
 
 class _StudentLogTab extends ConsumerStatefulWidget {
   final String studentId;
@@ -942,37 +941,51 @@ class _StudentLogTabState extends ConsumerState<_StudentLogTab> {
   Widget build(BuildContext context) {
     final logsAsync = ref.watch(studentLogsProvider(widget.studentId));
     final assignmentsAsync = ref.watch(teacherAssignmentsProvider);
+    final studentClassAsync =
+        ref.watch(studentCurrentClassProvider(widget.studentId));
 
     return Scaffold(
-      floatingActionButton: assignmentsAsync.when(
-        data: (assignments) {
-          final assignment = assignments.isNotEmpty ? assignments.first : null;
-          if (assignment == null) return const SizedBox.shrink();
-          return FloatingActionButton.extended(
-            heroTag: 'add_log',
-            backgroundColor: AppColors.warning,
-            onPressed: () async {
-              final result = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ActivityFormPage(
-                    classId: assignment.classId,
-                    className: assignment.className,
-                    academicYearId: assignment.academicYearId,
-                    studentId: widget.studentId,
-                    studentName: widget.studentName,
+      floatingActionButton: studentClassAsync.when(
+        data: (studentClass) => assignmentsAsync.when(
+          data: (assignments) {
+            final classId = studentClass?['class_id'] as String?;
+            final matchingAssignments = assignments
+                .where((assignment) => assignment.classId == classId)
+                .toList();
+            final assignment = matchingAssignments.isEmpty
+                ? null
+                : matchingAssignments.first;
+            if (assignment == null) return const SizedBox.shrink();
+
+            return FloatingActionButton.extended(
+              heroTag: 'add_log',
+              backgroundColor: AppColors.warning,
+              onPressed: () async {
+                final result = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ActivityFormPage(
+                      classId: assignment.classId,
+                      className: assignment.className,
+                      academicYearId: assignment.academicYearId,
+                      studentId: widget.studentId,
+                      studentName: widget.studentName,
+                    ),
                   ),
-                ),
-              );
-              if (result == true) {
-                ref.invalidate(studentLogsProvider(widget.studentId));
-              }
-            },
-            icon: const Icon(Icons.add_rounded, color: Colors.white),
-            label: const Text('Add Log',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-          );
-        },
+                );
+                if (result == true) {
+                  ref.invalidate(studentLogsProvider(widget.studentId));
+                }
+              },
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text('Add Log',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
         loading: () => const SizedBox.shrink(),
         error: (_, __) => const SizedBox.shrink(),
       ),
@@ -998,7 +1011,7 @@ class _StudentLogTabState extends ConsumerState<_StudentLogTab> {
                           fontWeight: FontWeight.w700, fontSize: 16)),
                   const SizedBox(height: 6),
                   Text(
-                    'Tap "Add Log" to record a behavior,\nparticipation, or note for ${widget.studentName.split(' ').first}.',
+                    'Class activities and notes for ${widget.studentName.split(' ').first} will appear here.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                         color: AppColors.textSecondary, fontSize: 13),

@@ -8,7 +8,6 @@ class ActivityFormPage extends ConsumerStatefulWidget {
   final String? classId;
   final String className;
   final String academicYearId;
-  // When set, this is a student-specific behavior log
   final String? studentId;
   final String? studentName;
 
@@ -34,18 +33,6 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
   DateTime _activityDate = DateTime.now();
   bool _isSubmitting = false;
 
-  // Types shown for student logs vs class-wide events
-  static const _studentLogTypes = [
-    'behavior',
-    'participation',
-    'achievement',
-    'concern',
-    'counseling',
-    'discipline',
-    'health',
-    'other',
-  ];
-
   static const _classEventTypes = [
     'event',
     'sports',
@@ -55,6 +42,17 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
     'assignment',
     'behavior',
     'participation',
+  ];
+
+  static const _studentLogTypes = [
+    'behavior',
+    'participation',
+    'achievement',
+    'concern',
+    'counseling',
+    'discipline',
+    'health',
+    'other',
   ];
 
   late String _activityType;
@@ -77,15 +75,13 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isStudentLog = widget.isStudentLog;
-
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(isStudentLog ? 'Log Student Behavior' : 'Log Activity'),
+        title: Text(widget.isStudentLog ? 'Student Log' : 'Class Log'),
         actions: [
           TextButton(
             onPressed: _isSubmitting ? null : _submit,
@@ -102,7 +98,7 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isStudentLog
+                color: widget.isStudentLog
                     ? AppColors.warningLight
                     : AppColors.successLight,
                 borderRadius: BorderRadius.circular(12),
@@ -110,8 +106,12 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
               child: Row(
                 children: [
                   Icon(
-                    isStudentLog ? Icons.person_outlined : Icons.class_,
-                    color: isStudentLog ? AppColors.warning : AppColors.success,
+                    widget.isStudentLog
+                        ? Icons.person_outline_rounded
+                        : Icons.class_,
+                    color: widget.isStudentLog
+                        ? AppColors.warning
+                        : AppColors.success,
                     size: 16,
                   ),
                   const SizedBox(width: 8),
@@ -119,53 +119,32 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (isStudentLog) ...[
-                          Text(
-                            widget.studentName ?? 'Student',
-                            style: const TextStyle(
-                                color: AppColors.warning,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13),
-                          ),
-                          Text(
-                            'This log will be sent to parent(s)',
-                            style: const TextStyle(
-                                color: AppColors.warning,
-                                fontSize: 11),
-                          ),
-                        ] else
-                          Text(
-                            'Class: ${widget.className}',
-                            style: const TextStyle(
-                                color: AppColors.success,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13),
+                        Text(
+                          widget.isStudentLog
+                              ? 'Student: ${widget.studentName}'
+                              : 'Class: ${widget.className}',
+                          style: TextStyle(
+                              color: widget.isStudentLog
+                                  ? AppColors.warning
+                                  : AppColors.success,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13),
+                        ),
+                        if (widget.isStudentLog)
+                          const Text(
+                            'Only this student\'s active parent(s) will be notified.',
+                            style: TextStyle(
+                                color: AppColors.warning, fontSize: 11),
+                          )
+                        else
+                          const Text(
+                            'All active parents in this class will be notified.',
+                            style: TextStyle(
+                                color: AppColors.success, fontSize: 11),
                           ),
                       ],
                     ),
                   ),
-                  if (isStudentLog)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.send_rounded,
-                              size: 11, color: AppColors.warning),
-                          SizedBox(width: 4),
-                          Text('Notifies Parent',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.warning,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -173,7 +152,7 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
 
             // Log type chips
             Text(
-              isStudentLog ? 'Log Type' : 'Activity Type',
+              'Activity Type',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -191,13 +170,10 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
                   selectedColor: color.withValues(alpha: 0.15),
                   labelStyle: TextStyle(
                     color: selected ? color : AppColors.textSecondary,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
                     fontSize: 12,
                   ),
-                  side: BorderSide(
-                      color:
-                          selected ? color : AppColors.border),
+                  side: BorderSide(color: selected ? color : AppColors.border),
                 );
               }).toList(),
             ),
@@ -209,9 +185,7 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
             TextFormField(
               controller: _titleCtrl,
               decoration: InputDecoration(
-                hintText: isStudentLog
-                    ? 'e.g. Disrupting class, Excellent participation'
-                    : 'Activity title',
+                hintText: 'Activity title',
               ),
               validator: (v) =>
                   v == null || v.trim().isEmpty ? 'Required' : null,
@@ -241,7 +215,7 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
             const SizedBox(height: 16),
 
             Text(
-              isStudentLog ? 'Details / Notes' : 'Description (Optional)',
+              'Description (Optional)',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -249,15 +223,8 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
               controller: _descCtrl,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText: isStudentLog
-                    ? 'Describe what happened in detail...'
-                    : 'Describe the activity...',
+                hintText: 'Describe the activity...',
               ),
-              validator: isStudentLog
-                  ? (v) => v == null || v.trim().isEmpty
-                      ? 'Please add details'
-                      : null
-                  : null,
             ),
             const SizedBox(height: 32),
 
@@ -265,14 +232,14 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _isSubmitting ? null : _submit,
-                icon: Icon(
-                    isStudentLog ? Icons.save_rounded : Icons.event_note_rounded),
+                icon: Icon(Icons.event_note_rounded),
                 label: _isSubmitting
                     ? const Text('Saving...')
-                    : Text(isStudentLog ? 'Save Log' : 'Log Activity'),
+                    : Text(widget.isStudentLog
+                        ? 'Save Student Log'
+                        : 'Broadcast Class Log'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isStudentLog ? AppColors.warning : AppColors.success,
+                  backgroundColor: AppColors.success,
                 ),
               ),
             ),
@@ -286,9 +253,7 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
   String _prettyType(String t) => t
       .replaceAll('_', ' ')
       .split(' ')
-      .map((w) => w.isNotEmpty
-          ? '${w[0].toUpperCase()}${w.substring(1)}'
-          : '')
+      .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
       .join(' ');
 
   (Color, IconData) _typeStyle(String type) {
@@ -316,9 +281,8 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
 
     await ref.read(activitiesNotifierProvider.notifier).create(
           title: _titleCtrl.text.trim(),
-          description: _descCtrl.text.trim().isEmpty
-              ? null
-              : _descCtrl.text.trim(),
+          description:
+              _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
           activityType: _activityType,
           activityDate: _activityDate,
           classId: widget.classId,
@@ -336,8 +300,8 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(widget.isStudentLog
-                ? 'Log saved and parent notified'
-                : 'Activity logged successfully'),
+                ? 'Student log saved and parent notified'
+                : 'Class log saved and parents notified'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -346,8 +310,7 @@ class _ActivityFormPageState extends ConsumerState<ActivityFormPage> {
       error: (e, _) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Error: $e'),
-              backgroundColor: AppColors.error),
+              content: Text('Error: $e'), backgroundColor: AppColors.error),
         );
       },
       loading: () {},

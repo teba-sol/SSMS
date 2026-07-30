@@ -9,7 +9,7 @@ class Activity extends Equatable {
   final String? location;
   final String? organizerId;
   final String? classId;
-  final String? studentId;   // null = class-wide, set = student-specific log
+  final String? studentId;
   final String academicYearId;
   final DateTime createdAt;
   final Map<String, dynamic>? organizerData;
@@ -35,7 +35,6 @@ class Activity extends Equatable {
   }
 
   bool get isSchoolWide => classId == null;
-  bool get isStudentLog => studentId != null;
 
   factory Activity.fromJson(Map<String, dynamic> json) => Activity(
         id: json['id'] as String,

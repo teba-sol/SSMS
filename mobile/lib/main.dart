@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/realtime_sync.dart';
 import 'supabase/supabase_client.dart';
 
 void main() async {
@@ -46,6 +47,7 @@ class SSCSApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(realtimeSyncProvider);
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(

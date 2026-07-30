@@ -48,27 +48,27 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                   : 'Select a student to message their parent.',
               icon: Icons.chat_bubble_outline_rounded,
               action: ElevatedButton.icon(
-                onPressed: widget.isParent
-                    ? _showNewConversationSheet
-                    : _showSelectStudentSheet,
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: Text(
-                    widget.isParent ? 'New Message' : 'Message a Parent'),
-                style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(160, 44)),
+                onPressed: () => _ContactAdminTile.openAdminConversation(
+                  context,
+                  ref,
+                  isParent: widget.isParent,
+                ),
+                icon: const Icon(Icons.support_agent_rounded, size: 18),
+                label: Text('Contact Support'),
+                style:
+                    ElevatedButton.styleFrom(minimumSize: const Size(160, 44)),
               ),
             );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: conversations.length + (widget.isParent ? 1 : 0),
+            itemCount: conversations.length + 1,
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (ctx, i) {
-              if (widget.isParent && i == 0) {
-                return _ContactAdminTile();
+              if (i == 0) {
+                return _ContactAdminTile(isParent: widget.isParent);
               }
-              final conv =
-                  widget.isParent ? conversations[i - 1] : conversations[i];
+              final conv = conversations[i - 1];
               final currentUserId = AppSupabase.currentUser?.id ?? '';
               final other = conv.otherParticipant(currentUserId);
 
@@ -227,8 +227,7 @@ class _SelectStudentParentSheetState
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) =>
-                    Center(child: Text('Error: $e')),
+                error: (e, _) => Center(child: Text('Error: $e')),
               ),
             ),
           ],
@@ -283,9 +282,8 @@ class _AllStudentsForParentPicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final allAsync = classIds
-        .map((id) => ref.watch(classStudentsListProvider(id)))
-        .toList();
+    final allAsync =
+        classIds.map((id) => ref.watch(classStudentsListProvider(id))).toList();
 
     if (allAsync.any((a) => a.isLoading)) {
       return const Center(child: CircularProgressIndicator());
@@ -335,11 +333,10 @@ class _AllStudentsForParentPicker extends ConsumerWidget {
           ),
           title: Text(s.fullName,
               style: const TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: Text('ID: ${s.studentId}',
-              style: const TextStyle(fontSize: 12)),
+          subtitle:
+              Text('ID: ${s.studentId}', style: const TextStyle(fontSize: 12)),
           trailing: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: AppColors.primaryLight,
               borderRadius: BorderRadius.circular(20),
@@ -393,8 +390,7 @@ class _ParentPickerSheet extends ConsumerWidget {
                   const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
           const SizedBox(height: 4),
           const Text('Select who you want to message',
-              style:
-                  TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
           const SizedBox(height: 16),
           parentsAsync.when(
             data: (parents) {
@@ -423,8 +419,8 @@ class _ParentPickerSheet extends ConsumerWidget {
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('Parent ID: ${p.parentId.substring(0, 8)}…',
                         style: const TextStyle(fontSize: 11)),
-                    trailing: const Icon(Icons.arrow_forward_ios_rounded,
-                        size: 14),
+                    trailing:
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                     onTap: () => onParentSelected(
                         p.parentId, '$studentName\'s ${p.relationship.label}'),
                   );
@@ -444,6 +440,10 @@ class _ParentPickerSheet extends ConsumerWidget {
 // ── Shared ───────────────────────────────────────────────────────────────────
 
 class _ContactAdminTile extends ConsumerWidget {
+  final bool isParent;
+
+  const _ContactAdminTile({required this.isParent});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
@@ -474,15 +474,27 @@ class _ContactAdminTile extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
                 color: AppColors.warning)),
       ),
-      onTap: () => _openAdminConversation(context, ref),
+      onTap: () => openAdminConversation(context, ref, isParent: isParent),
     );
   }
 
-  Future<void> _openAdminConversation(BuildContext context, WidgetRef ref) async {
-    final results =
-        await ref.read(messagesServiceProvider).searchUsersToMessage('admin');
-    final admin =
-        results.where((u) => u.role == UserRole.administrator).firstOrNull;
+  static Future<void> openAdminConversation(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool isParent,
+  }) async {
+    Profile? admin;
+    try {
+      admin = await ref.read(messagesServiceProvider).getAdminSupportContact();
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Unable to load admin support. Try again.')),
+        );
+      }
+      return;
+    }
     if (admin == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -493,14 +505,21 @@ class _ContactAdminTile extends ConsumerWidget {
     }
     final conv =
         await ref.read(conversationsProvider.notifier).getOrCreate(admin.id);
-    if (conv != null && context.mounted) {
-      context.push(RouteNames.parentChat, extra: {
-        'conversationId': conv.id,
-        'otherUserId': admin.id,
-        'otherUserName': admin.fullName,
-        'otherUserRole': 'administrator',
-      });
+    if (!context.mounted) return;
+    if (conv == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Unable to start the support chat. Try again.')),
+      );
+      return;
     }
+    context.push(isParent ? RouteNames.parentChat : RouteNames.teacherChat,
+        extra: {
+          'conversationId': conv.id,
+          'otherUserId': admin.id,
+          'otherUserName': admin.fullName,
+          'otherUserRole': 'administrator',
+        });
   }
 }
 
@@ -546,9 +565,7 @@ class _ConversationTile extends StatelessWidget {
             child: Text(
               name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?',
               style: TextStyle(
-                  color: roleColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18),
+                  color: roleColor, fontWeight: FontWeight.w700, fontSize: 18),
             ),
           ),
           if (unread > 0)
@@ -556,13 +573,12 @@ class _ConversationTile extends StatelessWidget {
               right: 0,
               top: 0,
               child: Container(
-                padding: const EdgeInsets.all(3),
                 decoration: const BoxDecoration(
                   color: AppColors.error,
                   shape: BoxShape.circle,
                 ),
-                child: Text('$unread',
-                    style: const TextStyle(color: Colors.white, fontSize: 9)),
+                width: 10,
+                height: 10,
               ),
             ),
         ],
@@ -572,8 +588,7 @@ class _ConversationTile extends StatelessWidget {
           Expanded(
             child: Text(name,
                 style: TextStyle(
-                    fontWeight:
-                        unread > 0 ? FontWeight.w700 : FontWeight.w600,
+                    fontWeight: unread > 0 ? FontWeight.w700 : FontWeight.w600,
                     fontSize: 14)),
           ),
           Container(
@@ -602,16 +617,14 @@ class _ConversationTile extends StatelessWidget {
                 color: unread > 0
                     ? AppColors.textPrimary
                     : AppColors.textSecondary,
-                fontWeight:
-                    unread > 0 ? FontWeight.w500 : FontWeight.normal,
+                fontWeight: unread > 0 ? FontWeight.w500 : FontWeight.normal,
               ),
             ),
           ),
           if (lastTime != null)
             Text(
               timeago.format(lastTime!, allowFromNow: true),
-              style:
-                  const TextStyle(fontSize: 11, color: AppColors.textHint),
+              style: const TextStyle(fontSize: 11, color: AppColors.textHint),
             ),
         ],
       ),
@@ -629,8 +642,7 @@ class _NewConversationSheet extends ConsumerStatefulWidget {
       _NewConversationSheetState();
 }
 
-class _NewConversationSheetState
-    extends ConsumerState<_NewConversationSheet> {
+class _NewConversationSheetState extends ConsumerState<_NewConversationSheet> {
   final _ctrl = TextEditingController();
   String _query = '';
 
@@ -664,8 +676,7 @@ class _NewConversationSheetState
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
               child: Text('New Message',
-                  style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
             const SizedBox(height: 12),
             Padding(
@@ -705,14 +716,13 @@ class _NewConversationSheetState
                                   ),
                                   title: Text(u.fullName),
                                   subtitle: Text(u.role.name,
-                                      style:
-                                          const TextStyle(fontSize: 12)),
+                                      style: const TextStyle(fontSize: 12)),
                                   onTap: () => _startConversation(u),
                                 );
                               },
                             ),
-                      loading: () => const Center(
-                          child: CircularProgressIndicator()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
             ),

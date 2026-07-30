@@ -42,9 +42,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     super.initState();
     // Mark messages as read
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
-          .read(messagesServiceProvider)
-          .markMessagesRead(widget.conversationId);
+      ref.read(messagesServiceProvider).markMessagesRead(widget.conversationId);
     });
   }
 
@@ -71,11 +69,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.canPop() ? context.pop() : context.go(
-            widget.otherUserRole == 'parent'
-                ? RouteNames.teacherMessages
-                : RouteNames.parentMessages,
-          ),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(
+                  widget.otherUserRole == 'parent'
+                      ? RouteNames.teacherMessages
+                      : RouteNames.parentMessages,
+                ),
         ),
         titleSpacing: 0,
         title: Row(
@@ -113,6 +113,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           Expanded(
             child: messagesAsync.when(
               data: (messages) {
+                final hasUnreadMessages = messages.any(
+                  (message) =>
+                      message.senderId != currentUserId && !message.isRead,
+                );
+                if (hasUnreadMessages) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ref
+                        .read(messagesServiceProvider)
+                        .markMessagesRead(widget.conversationId);
+                  });
+                }
+
                 if (messages.isEmpty) {
                   return Center(
                     child: Column(
@@ -132,7 +144,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             style: TextStyle(
                                 fontWeight: FontWeight.w600, fontSize: 15)),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 8),
                           child: Text(
                             'Send a message to ${widget.otherUserName}',
                             textAlign: TextAlign.center,
@@ -157,7 +170,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: messages.length,
                   itemBuilder: (ctx, i) {
                     final msg = messages[i];

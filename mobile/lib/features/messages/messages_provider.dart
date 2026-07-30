@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/conversation_model.dart';
 import '../../models/message_model.dart';
 import '../../models/profile_model.dart';
+import '../../core/services/realtime_sync.dart';
 import 'messages_service.dart';
 
 final messagesServiceProvider =
@@ -11,6 +12,7 @@ final messagesServiceProvider =
 class ConversationsNotifier extends Notifier<AsyncValue<List<Conversation>>> {
   @override
   AsyncValue<List<Conversation>> build() {
+    ref.listen<int>(realtimeSyncProvider, (_, __) => _load());
     _load();
     return const AsyncValue.loading();
   }
@@ -18,8 +20,7 @@ class ConversationsNotifier extends Notifier<AsyncValue<List<Conversation>>> {
   Future<void> _load() async {
     state = const AsyncValue.loading();
     try {
-      final data =
-          await ref.read(messagesServiceProvider).getConversations();
+      final data = await ref.read(messagesServiceProvider).getConversations();
       state = AsyncValue.data(data);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -41,8 +42,9 @@ class ConversationsNotifier extends Notifier<AsyncValue<List<Conversation>>> {
   }
 }
 
-final conversationsProvider = NotifierProvider<ConversationsNotifier,
-    AsyncValue<List<Conversation>>>(ConversationsNotifier.new);
+final conversationsProvider =
+    NotifierProvider<ConversationsNotifier, AsyncValue<List<Conversation>>>(
+        ConversationsNotifier.new);
 
 // Real-time messages stream for a conversation
 final messagesStreamProvider =

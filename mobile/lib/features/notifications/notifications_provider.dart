@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/notification_model.dart';
+import '../../core/services/realtime_sync.dart';
 import '../announcements/announcements_provider.dart';
 import 'notifications_service.dart';
 
@@ -28,6 +29,7 @@ class NotificationsNotifier
     extends Notifier<AsyncValue<List<AppNotification>>> {
   @override
   AsyncValue<List<AppNotification>> build() {
+    ref.listen<int>(realtimeSyncProvider, (_, __) => _load());
     _load();
     return const AsyncValue.loading();
   }
