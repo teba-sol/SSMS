@@ -8,6 +8,8 @@ import '../../core/widgets/empty_widget.dart';
 import '../../models/notification_model.dart';
 import '../../models/announcement_model.dart';
 import '../announcements/announcements_provider.dart';
+import '../dashboard/parent_dashboard_page.dart';
+import '../students/students_provider.dart';
 import 'notifications_provider.dart';
 
 /// A unified item shown in the notification center.
@@ -61,12 +63,29 @@ class NotificationsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifState = ref.watch(notificationsProvider);
     final announcState = ref.watch(announcementsProvider);
+    final childrenAsync = ref.watch(parentChildrenProvider);
+    final selectedIndex = ref.watch(selectedChildIndexProvider);
 
     // Build merged list
     final List<_FeedItem> feed = [];
 
+    final selectedStudentId = childrenAsync.whenOrNull<String>(
+      data: (children) {
+        final child = children.length > selectedIndex
+            ? children[selectedIndex]
+            : children.firstOrNull;
+        return child?.studentId;
+      },
+    );
+
     if (notifState case AsyncData(:final value)) {
-      feed.addAll(value.map(_FeedItem.fromNotification));
+      final filtered = selectedStudentId == null
+          ? value
+          : value.where((n) {
+              final referenceId = n.referenceId;
+              return referenceId == null || referenceId == selectedStudentId;
+            }).toList();
+      feed.addAll(filtered.map(_FeedItem.fromNotification));
     }
     if (announcState case AsyncData(:final value)) {
       // Only show published announcements

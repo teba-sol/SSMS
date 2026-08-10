@@ -11,13 +11,13 @@ import '../../core/widgets/app_card.dart';
 import '../../models/result_model.dart';
 import '../../models/teacher_model.dart';
 import '../students/students_provider.dart';
+import '../students/teacher_class_subject_flow_page.dart';
 import '../dashboard/parent_dashboard_page.dart';
 import 'results_provider.dart';
 
 class ResultsPage extends ConsumerWidget {
   final bool isParent;
   const ResultsPage({super.key, this.isParent = false});
-
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,6 +39,10 @@ class _TeacherResultsViewState extends ConsumerState<_TeacherResultsView> {
 
   @override
   Widget build(BuildContext context) {
+    return const TeacherClassSubjectFlowPage(
+      mode: TeacherClassFlowMode.results,
+    );
+    /*
     final assignmentsAsync = ref.watch(teacherAssignmentsProvider);
 
     Future<void> refresh() async {
@@ -144,6 +148,7 @@ class _TeacherResultsViewState extends ConsumerState<_TeacherResultsView> {
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
+  */
   }
 }
 
@@ -178,8 +183,8 @@ class _AssignmentResultsView extends ConsumerWidget {
                       size: 48, color: AppColors.textHint),
                   const SizedBox(height: 12),
                   const Text('No results yet',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 15)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                   const SizedBox(height: 4),
                   Text(
                       'Add results for ${assignment.subjectName} — ${assignment.className}',
@@ -194,9 +199,7 @@ class _AssignmentResultsView extends ConsumerWidget {
           // Group by student
           final byStudent = <String, List<Result>>{};
           for (final r in results) {
-            byStudent
-                .putIfAbsent(r.studentName, () => [])
-                .add(r);
+            byStudent.putIfAbsent(r.studentName, () => []).add(r);
           }
 
           return ListView.builder(
@@ -212,9 +215,7 @@ class _AssignmentResultsView extends ConsumerWidget {
                           .where((r) => r.percentage != null)
                           .map((r) => r.percentage!)
                           .reduce((a, b) => a + b) /
-                      studentResults
-                          .where((r) => r.percentage != null)
-                          .length
+                      studentResults.where((r) => r.percentage != null).length
                   : null;
 
               final color = avg == null
@@ -465,7 +466,8 @@ class _StudentResultsView extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Bar chart of subject averages
-              if (bySubject.length > 1) _SubjectAveragesChart(bySubject: bySubject),
+              if (bySubject.length > 1)
+                _SubjectAveragesChart(bySubject: bySubject),
               const SizedBox(height: 20),
               // Results by subject
               ...bySubject.entries.map((e) => _SubjectSection(
@@ -493,7 +495,8 @@ class _SubjectAveragesChart extends StatelessWidget {
     final averages = subjects.map((s) {
       final results = bySubject[s]!.where((r) => r.percentage != null).toList();
       if (results.isEmpty) return 0.0;
-      return results.map((r) => r.percentage!).reduce((a, b) => a + b) / results.length;
+      return results.map((r) => r.percentage!).reduce((a, b) => a + b) /
+          results.length;
     }).toList();
 
     return AppCard(
@@ -517,14 +520,17 @@ class _SubjectAveragesChart extends StatelessWidget {
                       reservedSize: 36,
                     ),
                   ),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (val, meta) {
                         final i = val.toInt();
-                        if (i < 0 || i >= subjects.length) return const SizedBox.shrink();
+                        if (i < 0 || i >= subjects.length)
+                          return const SizedBox.shrink();
                         final name = subjects[i];
                         return Padding(
                           padding: const EdgeInsets.only(top: 4),
@@ -539,11 +545,15 @@ class _SubjectAveragesChart extends StatelessWidget {
                 ),
                 barGroups: List.generate(subjects.length, (i) {
                   final avg = averages[i];
-                  final color = avg >= 90 ? AppColors.gradeA
-                      : avg >= 80 ? AppColors.gradeB
-                      : avg >= 70 ? AppColors.gradeC
-                      : avg >= 60 ? AppColors.gradeD
-                      : AppColors.gradeF;
+                  final color = avg >= 90
+                      ? AppColors.gradeA
+                      : avg >= 80
+                          ? AppColors.gradeB
+                          : avg >= 70
+                              ? AppColors.gradeC
+                              : avg >= 60
+                                  ? AppColors.gradeD
+                                  : AppColors.gradeF;
                   return BarChartGroupData(
                     x: i,
                     barRods: [
@@ -551,7 +561,8 @@ class _SubjectAveragesChart extends StatelessWidget {
                         toY: avg,
                         color: color,
                         width: 24,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(6)),
                       ),
                     ],
                   );
@@ -573,7 +584,10 @@ class _SubjectSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avg = results.where((r) => r.percentage != null).isNotEmpty
-        ? results.where((r) => r.percentage != null).map((r) => r.percentage!).reduce((a, b) => a + b) /
+        ? results
+                .where((r) => r.percentage != null)
+                .map((r) => r.percentage!)
+                .reduce((a, b) => a + b) /
             results.where((r) => r.percentage != null).length
         : null;
 
@@ -670,9 +684,7 @@ class _ResultTile extends StatelessWidget {
               Text(
                 result.displayScore,
                 style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: color),
+                    fontWeight: FontWeight.w700, fontSize: 15, color: color),
               ),
               if (pct != null)
                 Text(
@@ -682,7 +694,8 @@ class _ResultTile extends StatelessWidget {
                 ),
               if (result.grade != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -690,7 +703,9 @@ class _ResultTile extends StatelessWidget {
                   child: Text(
                     result.grade!,
                     style: TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w700, color: color),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: color),
                   ),
                 ),
             ],

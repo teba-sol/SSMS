@@ -9,6 +9,7 @@ import '../../core/widgets/empty_widget.dart';
 import '../../core/widgets/app_card.dart';
 import '../../models/activity_model.dart';
 import '../students/students_provider.dart';
+import '../students/teacher_class_subject_flow_page.dart';
 import '../dashboard/parent_dashboard_page.dart';
 import 'activities_provider.dart';
 import 'activity_form_page.dart';
@@ -21,7 +22,9 @@ class ActivitiesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return isParent
         ? const _ParentActivitiesView()
-        : const _TeacherActivitiesView();
+        : const TeacherClassSubjectFlowPage(
+            mode: TeacherClassFlowMode.activities,
+          );
   }
 }
 

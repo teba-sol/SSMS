@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/loading_widget.dart';
 import '../auth/auth_provider.dart';
@@ -37,6 +38,7 @@ class _ParentDashboardPageState extends ConsumerState<ParentDashboardPage> {
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(currentProfileProvider);
+    final strings = AppLocalizations.of(context);
     final childrenAsync = ref.watch(parentChildrenProvider);
     final unreadNotif = ref.watch(unreadNotificationsCountProvider);
     final selectedIndex = ref.watch(selectedChildIndexProvider);
@@ -91,7 +93,7 @@ class _ParentDashboardPageState extends ConsumerState<ParentDashboardPage> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Hello, ${profile?.firstName ?? 'Parent'}',
+                                        '${strings.isAmharic ? 'ሰላም' : 'Hello'}, ${profile?.firstName ?? (strings.isAmharic ? 'ወላጅ' : 'Parent')}',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w700,
@@ -150,7 +152,7 @@ class _ParentDashboardPageState extends ConsumerState<ParentDashboardPage> {
                                     onPressed: _refresh,
                                     icon: const Icon(Icons.refresh_rounded,
                                         color: Colors.white),
-                                    tooltip: 'Refresh',
+                                    tooltip: strings.isAmharic ? 'አድስ' : 'Refresh',
                                   ),
                                   // Settings
                                   IconButton(
@@ -198,8 +200,8 @@ class _ParentDashboardPageState extends ConsumerState<ParentDashboardPage> {
                                               BorderRadius.circular(22),
                                         ),
                                         child: Text(
-                                          child.student?.firstName ??
-                                              'Child ${i + 1}',
+                                          child.student?.firstName?.toString() ??
+                                              (strings.isAmharic ? 'ልጅ ${i + 1}' : 'Child ${i + 1}'),
                                           style: TextStyle(
                                             color: isSelected
                                                 ? AppColors.secondary
@@ -285,7 +287,7 @@ class _ChildDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final studentId = child.studentId;
     final resultsAsync = ref.watch(studentResultsProvider(studentId));
-    final attendanceAsync = ref.watch(studentAttendanceProvider(studentId));
+    final attendanceAsync = ref.watch(recentStudentAttendanceProvider(studentId));
     final attendanceSummaryAsync =
         ref.watch(studentAttendanceSummaryProvider(studentId));
 

@@ -22,6 +22,7 @@ import '../../features/notifications/notifications_page.dart';
 import '../../features/announcements/announcements_page.dart';
 import '../../features/announcements/announcement_form_page.dart';
 import '../../features/students/students_page.dart';
+import '../../features/students/teacher_class_subject_flow_page.dart';
 import '../../features/students/student_detail_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/settings/edit_profile_page.dart';
@@ -115,6 +116,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: RouteNames.teacherStudents,
             builder: (_, __) => const StudentsPage(),
           ),
+          GoRoute(
+            path: RouteNames.teacherClasses,
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>?;
+              return TeacherClassSubjectFlowPage(
+                initialClassId: extra?['initialClassId'] as String?,
+              );
+            },
+          ),
         ],
       ),
 
@@ -127,6 +137,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             classId: extra?['classId'] ?? '',
             className: extra?['className'] ?? '',
             assignmentId: extra?['assignmentId'] ?? '',
+            isBulkMode: extra?['isBulkMode'] ?? true,
+            selectedStudentId: extra?['selectedStudentId'],
+            selectedStudentName: extra?['selectedStudentName'],
           );
         },
       ),
@@ -150,6 +163,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             classId: extra?['classId'],
             className: extra?['className'] ?? 'School Wide',
             academicYearId: extra?['academicYearId'] ?? '',
+            studentId: extra?['studentId'],
+            studentName: extra?['studentName'],
           );
         },
       ),

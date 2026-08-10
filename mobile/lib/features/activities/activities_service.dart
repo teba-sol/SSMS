@@ -22,15 +22,29 @@ class ActivitiesService {
     return activities.where((a) => a.classId == null || a.classId == classId).toList();
   }
 
-  /// Personal logs for a single student.
+  /// Personal logs for a single student, including class-wide logs for their active classes.
   Future<List<Activity>> getStudentLogs(String studentId) async {
+    final enrollments = await _client
+        .from(AppTables.studentEnrollments)
+        .select('class_id')
+        .eq('student_id', studentId)
+        .eq('status', 'active');
+
+    final classIds = (enrollments as List)
+        .map((e) => e['class_id'] as String)
+        .toList();
+
     final data = await _client
         .from(AppTables.activities)
         .select('*, profiles!organizer_id(first_name, last_name)')
-        .eq('student_id', studentId)
         .order('activity_date', ascending: false)
         .limit(50);
-    return (data as List).map((e) => Activity.fromJson(e)).toList();
+
+    final all = (data as List).map((e) => Activity.fromJson(e)).toList();
+    return all.where((activity) {
+      if (activity.studentId != null) return activity.studentId == studentId;
+      return activity.classId == null || classIds.contains(activity.classId);
+    }).toList();
   }
 
   Future<List<Activity>> getActivitiesForStudent(String studentId) async {

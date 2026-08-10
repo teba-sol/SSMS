@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import 'auth_repository.dart';
 
 class ResetPasswordPage extends ConsumerStatefulWidget {
@@ -29,8 +30,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Set New Password')),
+      appBar: AppBar(title: Text(strings.isAmharic ? 'አዲስ የይለፍ ቃል አስጀምር' : 'Set New Password')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -42,13 +45,13 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'Create New Password',
+                    Text(
+                      strings.isAmharic ? 'አዲስ የይለፍ ቃል ፍጠር' : 'Create New Password',
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Your new password must be at least 8 characters.',
+                    Text(
+                      strings.isAmharic ? 'አዲሱ የይለፍ ቃል ቢያንስ 8 ቁምፊዎች መሆን አለበት።' : 'Your new password must be at least 8 characters.',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 32),
@@ -56,7 +59,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                       controller: _passwordController,
                       obscureText: _obscure1,
                       decoration: InputDecoration(
-                        labelText: 'New Password',
+                        labelText: strings.isAmharic ? 'አዲስ የይለፍ ቃል' : 'New Password',
                         prefixIcon: const Icon(Icons.lock_outlined),
                         suffixIcon: IconButton(
                           icon: Icon(_obscure1
@@ -76,7 +79,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                       controller: _confirmController,
                       obscureText: _obscure2,
                       decoration: InputDecoration(
-                        labelText: 'Confirm Password',
+                        labelText: strings.isAmharic ? 'የይለፍ ቃል ያረጋግጡ' : 'Confirm Password',
                         prefixIcon: const Icon(Icons.lock_outlined),
                         suffixIcon: IconButton(
                           icon: Icon(_obscure2
@@ -101,7 +104,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                               width: 20,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white))
-                          : const Text('Update Password'),
+                          : Text(strings.isAmharic ? 'የይለፍ ቃል ያሻሽሉ' : 'Update Password'),
                     ),
                   ],
                 ),
@@ -117,6 +120,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
+    final strings = AppLocalizations.of(context);
     final repo = AuthRepository();
     final result = await repo.updatePassword(_passwordController.text);
 
@@ -129,8 +133,8 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         ),
         (_) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password updated successfully'),
+            SnackBar(
+              content: Text(strings.isAmharic ? 'የይለፍ ቃል በተሳካ ሁኔታ ተሻሽሏል' : 'Password updated successfully'),
               backgroundColor: AppColors.success,
             ),
           );

@@ -70,6 +70,7 @@ class AttendanceService {
     required String studentId,
     String? classId,
     int limit = 50,
+    DateTime? fromDate,
   }) async {
     var query = _client
         .from(AppTables.attendance)
@@ -78,6 +79,10 @@ class AttendanceService {
 
     if (classId != null) {
       query = query.eq('class_id', classId);
+    }
+
+    if (fromDate != null) {
+      query = query.gte('date', fromDate.toIso8601String().split('T')[0]);
     }
 
     final data = await query.order('date', ascending: false).limit(limit);

@@ -20,6 +20,7 @@ class RouteNames {
   static const String teacherAnnouncementAdd = '/teacher/announcements/add';
   static const String teacherNotifications = '/teacher/notifications';
   static const String teacherStudents = '/teacher/students';
+  static const String teacherClasses = '/teacher/classes';
   static const String teacherStudentDetail = '/teacher/students/detail';
   static const String teacherProfile = '/teacher/profile';
 

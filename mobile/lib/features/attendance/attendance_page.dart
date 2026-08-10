@@ -11,6 +11,7 @@ import '../../core/widgets/app_card.dart';
 import '../../models/attendance_model.dart';
 import '../../models/teacher_model.dart';
 import '../students/students_provider.dart';
+import '../students/teacher_class_subject_flow_page.dart';
 import '../dashboard/parent_dashboard_page.dart';
 import 'attendance_provider.dart';
 
@@ -20,7 +21,9 @@ class AttendancePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return isParent ? const _ParentAttendanceView() : const _TeacherAttendanceView();
+    return isParent
+        ? const _ParentAttendanceView()
+        : const _TeacherAttendanceView();
   }
 }
 
@@ -30,6 +33,10 @@ class _TeacherAttendanceView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return const TeacherClassSubjectFlowPage(
+      mode: TeacherClassFlowMode.attendance,
+    );
+    /*
     final assignmentsAsync = ref.watch(teacherAssignmentsProvider);
 
     Future<void> refresh() async {
@@ -105,6 +112,7 @@ class _TeacherAttendanceView extends ConsumerWidget {
         ),
       ),
     );
+  */
   }
 }
 
@@ -150,13 +158,12 @@ class _AttendanceClassCard extends StatelessWidget {
                 ),
               ),
               ElevatedButton.icon(
-                onPressed: () => context.push(
-                    RouteNames.teacherAttendanceMark,
-                    extra: {
-                      'classId': assignment.classId,
-                      'className': assignment.className,
-                      'assignmentId': assignment.id,
-                    }),
+                onPressed: () =>
+                    context.push(RouteNames.teacherAttendanceMark, extra: {
+                  'classId': assignment.classId,
+                  'className': assignment.className,
+                  'assignmentId': assignment.id,
+                }),
                 icon: const Icon(Icons.fact_check_outlined, size: 16),
                 label: const Text('Mark'),
                 style: ElevatedButton.styleFrom(
@@ -367,16 +374,20 @@ class _AttendanceCalendarView extends ConsumerWidget {
                           ),
                         ),
                         const Text('Attendance Rate',
-                            style: TextStyle(
-                                color: Colors.white70, fontSize: 13)),
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 13)),
                         const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _SummaryChip('Present', summary['present'] ?? 0, AppColors.attendancePresent),
-                            _SummaryChip('Absent', summary['absent'] ?? 0, AppColors.attendanceAbsent),
-                            _SummaryChip('Late', summary['late'] ?? 0, AppColors.attendanceLate),
-                            _SummaryChip('Excused', summary['excused'] ?? 0, AppColors.attendanceExcused),
+                            _SummaryChip('Present', summary['present'] ?? 0,
+                                AppColors.attendancePresent),
+                            _SummaryChip('Absent', summary['absent'] ?? 0,
+                                AppColors.attendanceAbsent),
+                            _SummaryChip('Late', summary['late'] ?? 0,
+                                AppColors.attendanceLate),
+                            _SummaryChip('Excused', summary['excused'] ?? 0,
+                                AppColors.attendanceExcused),
                           ],
                         ),
                       ],
@@ -456,7 +467,8 @@ class _AttendanceCalendarView extends ConsumerWidget {
 
               // Legend
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -512,7 +524,9 @@ class _LegendItem extends StatelessWidget {
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 11, color: AppColors.textSecondary)),
         ],
       );
 }

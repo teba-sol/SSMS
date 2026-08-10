@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/loading_widget.dart';
@@ -27,7 +28,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('My Students'),
+        title: Text(AppLocalizations.of(context).myStudents),
         elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
@@ -36,7 +37,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> {
             child: TextField(
               onChanged: (v) => setState(() => _search = v),
               decoration: InputDecoration(
-                hintText: 'Search students...',
+                hintText: AppLocalizations.of(context).searchStudents,
                 prefixIcon: const Icon(Icons.search_rounded, size: 20),
                 suffixIcon: _search.isNotEmpty
                     ? IconButton(
@@ -59,9 +60,9 @@ class _StudentsPageState extends ConsumerState<StudentsPage> {
       body: assignmentsAsync.when(
         data: (assignments) {
           if (assignments.isEmpty) {
-            return const EmptyWidget(
-              title: 'No Classes',
-              subtitle: 'You have no assigned classes.',
+            return EmptyWidget(
+              title: AppLocalizations.of(context).noClasses,
+              subtitle: AppLocalizations.of(context).noAssignedClasses,
               icon: Icons.people_outline_rounded,
             );
           }
@@ -83,7 +84,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> {
                           horizontal: 16, vertical: 8),
                       children: [
                         _ClassTab(
-                          label: 'All',
+                          label: AppLocalizations.of(context).all,
                           count: null,
                           isSelected: _selectedClassId == null,
                           color: AppColors.primary,
@@ -125,7 +126,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> {
           );
         },
         loading: () => const ShimmerList(count: 5),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text(AppLocalizations.of(context).errorLoadingStudents(e))),
       ),
     );
   }
@@ -229,8 +230,9 @@ class _AllStudents extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (classes.isEmpty) {
-      return const EmptyWidget(
-          title: 'No Students', icon: Icons.people_outline_rounded);
+      return EmptyWidget(
+          title: AppLocalizations.of(context).noStudents,
+          icon: Icons.people_outline_rounded);
     }
 
     // Watch all class student lists and merge them
@@ -247,7 +249,7 @@ class _AllStudents extends ConsumerWidget {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text('Error loading students: $err',
+          child: Text(AppLocalizations.of(context).errorLoadingStudents(err),
               style: const TextStyle(color: Colors.red)),
         ),
       );
@@ -289,7 +291,7 @@ class _StudentList extends StatelessWidget {
 
     if (filtered.isEmpty) {
       return EmptyWidget(
-        title: search.isEmpty ? 'No Students' : 'No results for "$search"',
+        title: search.isEmpty ? AppLocalizations.of(context).noStudents : AppLocalizations.of(context).noResultsForSearch(search),
         icon: Icons.person_search_outlined,
       );
     }

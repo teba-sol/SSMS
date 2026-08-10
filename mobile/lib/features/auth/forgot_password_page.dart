@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/validators.dart';
+import '../../core/localization/app_localizations.dart';
 import 'auth_provider.dart';
 
 class ForgotPasswordPage extends ConsumerStatefulWidget {
@@ -25,9 +26,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final strings = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password')),
+      appBar: AppBar(title: Text(strings.isAmharic ? 'የይለፍ ቃል እንደገና ማስጀመር' : 'Reset Password')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -48,20 +50,20 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                               size: 48, color: AppColors.success),
                         ),
                         const SizedBox(height: 24),
-                        const Text(
-                          'Check Your Email',
+                        Text(
+                          strings.isAmharic ? 'ኢሜይልዎን ይፈትሹ' : 'Check Your Email',
                           style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'We sent a password reset link to ${_emailController.text}',
+                          strings.isAmharic ? 'የይለፍ ቃል እንደገና ማስጀመር አገናኝ ወደ ${_emailController.text} ልከናል' : 'We sent a password reset link to ${_emailController.text}',
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: AppColors.textSecondary),
                         ),
                         const SizedBox(height: 32),
                         OutlinedButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Back to Login'),
+                          child: Text(strings.isAmharic ? 'ወደ መግቢያ ተመለስ' : 'Back to Login'),
                         ),
                       ],
                     )
@@ -81,14 +83,14 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                                 size: 48, color: AppColors.primary),
                           ),
                           const SizedBox(height: 24),
-                          const Text(
-                            'Forgot Password?',
+                          Text(
+                            strings.isAmharic ? 'የይለፍ ቃል ረሳኽው?' : 'Forgot Password?',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Enter your email address and we\'ll send you a reset link.',
+                          Text(
+                            strings.isAmharic ? 'ኢሜይል አድራሻዎን ያስገቡ እና እኛ የእንደገና ማስጀመር አገናኝ እንልክልዎታለን።' : 'Enter your email address and we\'ll send you a reset link.',
                             textAlign: TextAlign.center,
                             style: TextStyle(color: AppColors.textSecondary),
                           ),
@@ -97,9 +99,9 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             validator: Validators.email,
-                            decoration: const InputDecoration(
-                              labelText: 'Email Address',
-                              prefixIcon: Icon(Icons.email_outlined),
+                            decoration: InputDecoration(
+                              labelText: strings.isAmharic ? 'ኢሜይል አድራሻ' : 'Email Address',
+                              prefixIcon: const Icon(Icons.email_outlined),
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -111,7 +113,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                                     width: 20,
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2, color: Colors.white))
-                                : const Text('Send Reset Link'),
+                                : Text(strings.isAmharic ? 'የእንደገና ማስጀመር አገናኝ ላክ' : 'Send Reset Link'),
                           ),
                         ],
                       ),

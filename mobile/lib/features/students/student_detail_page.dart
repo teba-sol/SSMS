@@ -263,6 +263,9 @@ class _StudentDetailPageState extends ConsumerState<StudentDetailPage>
         'classId': assignment.classId,
         'className': assignment.className,
         'assignmentId': assignment.id,
+        'isBulkMode': false,
+        'selectedStudentId': widget.studentId,
+        'selectedStudentName': widget.studentName,
       });
     } else {
       context.push(RouteNames.teacherResultAdd, extra: {

@@ -11,12 +11,18 @@ class AttendanceMarkPage extends ConsumerStatefulWidget {
   final String classId;
   final String className;
   final String assignmentId;
+  final bool isBulkMode;
+  final String? selectedStudentId;
+  final String? selectedStudentName;
 
   const AttendanceMarkPage({
     super.key,
     required this.classId,
     required this.className,
     required this.assignmentId,
+    this.isBulkMode = true,
+    this.selectedStudentId,
+    this.selectedStudentName,
   });
 
   @override
@@ -36,13 +42,19 @@ class _AttendanceMarkPageState extends ConsumerState<AttendanceMarkPage> {
       date: DateFormat('yyyy-MM-dd').format(_selectedDate),
     )));
 
+    final isSingleStudent = !widget.isBulkMode && widget.selectedStudentId != null;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(widget.className),
+        title: Text(
+          isSingleStudent
+              ? '${widget.selectedStudentName ?? 'Student'} • ${widget.className}'
+              : widget.className,
+        ),
         actions: [
           TextButton.icon(
             onPressed: _isSubmitting ? null : () => _submit(),
@@ -84,6 +96,8 @@ class _AttendanceMarkPageState extends ConsumerState<AttendanceMarkPage> {
                 }
               }
 
+              final isSingleStudent = !widget.isBulkMode && widget.selectedStudentId != null;
+
               return Column(
                 children: [
                   // Date selector
@@ -95,22 +109,25 @@ class _AttendanceMarkPageState extends ConsumerState<AttendanceMarkPage> {
                     }),
                   ),
 
-                  // Bulk actions
-                  _BulkActions(onMarkAll: (status) {
-                    setState(() {
-                      for (final d in _drafts.values) {
-                        d.status = status;
-                      }
-                    });
-                  }),
+                  if (widget.isBulkMode) ...[
+                    _BulkActions(onMarkAll: (status) {
+                      setState(() {
+                        for (final d in _drafts.values) {
+                          d.status = status;
+                        }
+                      });
+                    }),
+                  ],
 
-                  // Student list
                   Expanded(
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: students.length,
+                      itemCount: isSingleStudent ? 1 : students.length,
                       itemBuilder: (ctx, i) {
-                        final s = students[i];
+                        final s = isSingleStudent
+                            ? students.firstWhere(
+                                (student) => student.id == widget.selectedStudentId)
+                            : students[i];
                         final draft = _drafts[s.id]!;
                         return _StudentAttendanceRow(
                           draft: draft,
@@ -137,6 +154,8 @@ class _AttendanceMarkPageState extends ConsumerState<AttendanceMarkPage> {
                   );
                 }
               }
+              final isSingleStudent = !widget.isBulkMode && widget.selectedStudentId != null;
+
               return Column(
                 children: [
                   _DateSelector(
@@ -146,17 +165,22 @@ class _AttendanceMarkPageState extends ConsumerState<AttendanceMarkPage> {
                       _drafts.clear();
                     }),
                   ),
-                  _BulkActions(onMarkAll: (status) {
-                    setState(() {
-                      for (final d in _drafts.values) { d.status = status; }
-                    });
-                  }),
+                  if (widget.isBulkMode) ...[
+                    _BulkActions(onMarkAll: (status) {
+                      setState(() {
+                        for (final d in _drafts.values) { d.status = status; }
+                      });
+                    }),
+                  ],
                   Expanded(
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: students.length,
+                      itemCount: isSingleStudent ? 1 : students.length,
                       itemBuilder: (ctx, i) {
-                        final s = students[i];
+                        final s = isSingleStudent
+                            ? students.firstWhere(
+                                (student) => student.id == widget.selectedStudentId)
+                            : students[i];
                         final draft = _drafts[s.id]!;
                         return _StudentAttendanceRow(
                           draft: draft,

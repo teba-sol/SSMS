@@ -39,10 +39,15 @@ class AttendanceRepository {
   Future<Either<String, List<Attendance>>> getStudentAttendance({
     required String studentId,
     String? classId,
+    int limit = 50,
+    DateTime? fromDate,
   }) async {
     try {
       return Right(await _service.getStudentAttendance(
-          studentId: studentId, classId: classId));
+          studentId: studentId,
+          classId: classId,
+          limit: limit,
+          fromDate: fromDate));
     } catch (e) {
       return Left(e.toString());
     }

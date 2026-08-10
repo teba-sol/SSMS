@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/validators.dart';
+import '../../core/localization/app_localizations.dart';
 import 'auth_model.dart' as auth_model;
 import 'auth_provider.dart';
 
@@ -39,6 +40,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final strings = AppLocalizations.of(context);
 
     ref.listen<auth_model.AuthState>(authProvider, (previous, next) {
       if (next.status == auth_model.AuthStatus.error &&
@@ -88,7 +90,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Student Status Checkup',
+                      strings.isAmharic ? 'የተማሪ ሁኔታ ማረጋጊያ' : 'Student Status Checkup',
                       textAlign: TextAlign.center,
                       style: Theme.of(context)
                           .textTheme
@@ -97,7 +99,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Sign in to your account',
+                      strings.isAmharic ? 'ወደ መለያዎ ይግቡ' : 'Sign in to your account',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: AppColors.textSecondary,
@@ -109,8 +111,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       validator: Validators.email,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
+                      decoration: InputDecoration(
+                        labelText: strings.isAmharic ? 'ኢሜይል' : 'Email',
                         prefixIcon: Icon(Icons.email_outlined),
                       ),
                     ),
@@ -122,7 +124,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                       validator: Validators.password,
                       onFieldSubmitted: (_) => _handleLogin(),
                       decoration: InputDecoration(
-                        labelText: 'Password',
+                        labelText: strings.isAmharic ? 'የይለፍ ቃል' : 'Password',
                         prefixIcon: const Icon(Icons.lock_outlined),
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -172,7 +174,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () => context.push(RouteNames.forgotPassword),
-                        child: const Text('Forgot Password?'),
+                        child: Text(strings.isAmharic ? 'የይለፍ ቃል ረሳኽው?' : 'Forgot Password?'),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -187,7 +189,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                 color: AppColors.textOnPrimary,
                               ),
                             )
-                          : const Text('Sign In'),
+                          : Text(strings.isAmharic ? 'ግባ' : 'Sign In'),
                     ),
                   ],
                 ),

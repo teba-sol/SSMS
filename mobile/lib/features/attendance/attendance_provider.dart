@@ -35,6 +35,18 @@ final studentAttendanceProvider =
   return result.fold((e) => throw Exception(e), (v) => v);
 });
 
+final recentStudentAttendanceProvider =
+    FutureProvider.family<List<Attendance>, String>((ref, studentId) async {
+  ref.watch(realtimeSyncProvider);
+  final repo = ref.read(attendanceRepositoryProvider);
+  final result = await repo.getStudentAttendance(
+    studentId: studentId,
+    limit: 5,
+    fromDate: DateTime.now().subtract(const Duration(days: 5)),
+  );
+  return result.fold((e) => throw Exception(e), (v) => v);
+});
+
 // Attendance summary for a student
 final studentAttendanceSummaryProvider =
     FutureProvider.family<Map<String, int>, String>((ref, studentId) async {
